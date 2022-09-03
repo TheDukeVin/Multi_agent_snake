@@ -27,6 +27,29 @@ void Trainer::initializeNode(Environment& env, int currNode){
     sumScore[currNode] = 0;
     
     // Evaluate the network at the current node.
+/*
+    // Use learned features
+
+    values[currNode] = 3 + env.getReward()
+                         + ((env.features(2) - 1) * 4) 
+                         - (env.features(3) * 0.1) 
+                         + (1 - env.features(5));
+
+    if(env.actionType == 0){
+        int numValidActions = 0;
+        for(int d=0; d<numAgentActions; d++){
+            numValidActions ++;
+        }
+        for(int d=0; d<numAgentActions; d++){
+            if(outcomes[currNode][d] != -2){
+                policy[currNode][d] = 1.0 / numValidActions;
+            }
+            else{
+                policy[currNode][d] = -1;
+            }
+        }
+    }
+    */
     
     int symID = rand()%8;
     env.inputSymmetric(a, symID);

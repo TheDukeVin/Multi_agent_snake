@@ -102,8 +102,8 @@ void trainCycle(){
     cout<<"Beginning training: "<<time(NULL)<<'\n';
     standardSetup(t.a);
 
-    cout<<"Reading net:\n";
-    t.a.readNet("snakeConv.in");
+    //cout<<"Reading net:\n";
+    //t.a.readNet("snakeConv.in");
 
     const int storePeriod = 50;
     
@@ -112,10 +112,10 @@ void trainCycle(){
     dq.learnRate = 0.001;
     t.actionTemperature = 2;
     
-    cout<<"Reading games\n";
-    vector<int> scores = dq.readGames(); // read games from games.in file.
-    cout<<"Finished reading " << dq.index << " games\n";
-    //vector<int> scores;
+    //cout<<"Reading games\n";
+    //vector<int> scores = dq.readGames(); // read games from games.in file.
+    //cout<<"Finished reading " << dq.index << " games\n";
+    vector<int> scores;
     
     double sum = 0;
     int completions = 0;
@@ -132,7 +132,7 @@ void trainCycle(){
     hold4.close();
     t.valueLog = valueLog;
     
-    for(int i=0; i<=numGames; i++){
+    for(int i=1; i<=numGames; i++){
         ofstream valueOut(valueLog, ios::app);
         valueOut<<"Game "<<i<<' '<<time(NULL)<<'\n';
         valueOut.close();
@@ -202,6 +202,77 @@ void exportGames(){
     //t.exportGame();
 }
 
+void analyze_results(){
+    cout<<"Reading games\n";
+    vector<int> scores = dq.readGames(); // read games from games.in file.
+    cout<<"Finished reading " << dq.index << " games\n";
+    int numData = dq.index;
+    double sumScore = 0;
+    int completions = 0;
+    int lastGames = 1000;
+    for(int i=numData-lastGames; i<numData; i++){
+        int score = dq.queue[i][dq.gameLengths[i] - 1].e.snakeSize;
+        sumScore += score;
+        if(score == 100){
+            completions++;
+        }
+    }
+    cout<<"Last " << lastGames << " average: "<<(sumScore / lastGames)<<'\n';
+    cout<<"Completions: "<<completions<<'\n';
+
+    ofstream fout("features.txt");
+    for(int i=0; i<numData; i++){
+        fout<<scores[i]<<'\t';
+    }
+    fout<<"\n";
+    for(int t=0; t<6; t++){
+        cout<<"Calculating feature "<<t<<'\n';
+        for(int i=0; i<numData; i++){
+            double featureSum = 0;
+            int count = 0;
+            for(int j=0; j<dq.gameLengths[i]; j++){
+                if(abs(dq.queue[i][j].e.snakeSize - 50) <= 10){
+                    int feature = dq.queue[i][j].e.features(t);
+                    if(feature >= 0){
+                        count++;
+                        featureSum += feature;
+                    }
+                }
+            }
+            if(count == 0){
+                fout<<"-1\t";
+            }
+            else{
+                fout<<(featureSum / count)<<'\t';
+            }
+        }
+        fout<<"\n";
+    }
+    for(int t=0; t<3; t++){
+        cout<<"Calculating feature change "<<t<<'\n';
+        for(int i=0; i<numData; i++){
+            double featureSum = 0;
+            int count = 0;
+            for(int j=0; j<dq.gameLengths[i]-1; j++){
+                if(abs(dq.queue[i][j].e.snakeSize - 50) <= 10){
+                    int feature = dq.queue[i][j].e.features2(&dq.queue[i][j+1].e,t);
+                    if(feature >= 0){
+                        count++;
+                        featureSum += feature;
+                    }
+                }
+            }
+            if(count == 0){
+                fout<<"-1\t";
+            }
+            else{
+                fout<<(featureSum / count)<<'\t';
+            }
+        }
+        fout<<"\n";
+    }
+}
+
 int main()
 {
     srand((unsigned)time(NULL));
@@ -217,6 +288,8 @@ int main()
     //evaluate();
     
     //dq.readGames();
+
+    //analyze_results();
     
     return 0;
     

@@ -36,7 +36,7 @@ using namespace std;
 #define numBatches 30
 
 //#define scoreNorm 10
-#define queueSize 3000
+#define queueSize 2000
 
 #define numGames 4000
 #define numPaths 200
@@ -53,6 +53,10 @@ using namespace std;
 
 #define PASS_VALUE 0
 #define PASS_FULL 1
+
+// Multithreading
+
+#define NUM_THREADS 8
 
 const string outAddress = "snake_conv.txt";
 
@@ -321,6 +325,13 @@ public:
     
     void agentAction(int actionIndex);
     void chanceAction(int actionIndex);
+
+    double features(int featureType);
+    double features2(Environment* nextState, int featureType);
+    double distance(int featureType);
+
+    void BFS(int* dist, int sourcex, int sourcey, bool fill = true);
+    int lastAction();
     
 private:
     double getScore();

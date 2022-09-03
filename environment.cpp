@@ -269,3 +269,233 @@ double Environment::getReward(){
     if(actionType == 1) return 1;
     return 0;
 }
+
+void Environment::BFS(int* dist, int sourcex, int sourcey, bool fill){
+    if(fill){
+        for(int i=0; i<boardx * boardy; i++){
+            dist[i] = -1;
+        }
+    }
+    list<int> queue;
+    queue.push_back(sourcex * boardy + sourcey);
+    dist[sourcex * boardy + sourcey] = 0;
+    int numVisibleNodes = 0;
+    while(!queue.empty()){
+        int currNode = queue.front();
+        queue.pop_front();
+        numVisibleNodes++;
+        int currx = currNode / boardy;
+        int curry = currNode % boardy;
+        for(int i=0; i<4; i++){
+            int nextx = currx + dir[i][0];
+            int nexty = curry + dir[i][1];
+            if(nextx != -1 && nextx != boardx && nexty != -1 && nexty != boardy && 
+            (snake[nextx][nexty] == -1 || (nextx == tailx && nexty == taily) ) && dist[nextx * boardy + nexty] == -1){
+                dist[nextx * boardy + nexty] = dist[currNode] + 1;
+                queue.push_back(nextx * boardy + nexty);
+            }
+        }
+    }
+}
+
+double Environment::features(int featureType){
+    if(featureType == 0){
+        int currx = headx;
+        int curry = heady;
+        for(int r=0; r<10; r++){
+            if(currx != 0 && currx != boardx-1 && curry != 0 && curry != boardy-1){
+                return 0;
+            }
+            int nextx, nexty;
+            int i;
+            for(i=0; i<4; i++){
+                nextx = currx + dir[i][0];
+                nexty = curry + dir[i][1];
+                if(nextx == -1 || nextx == boardx){
+                    continue;
+                }
+                if(nexty == -1 || nexty == boardy){
+                    continue;
+                }
+                if(snake[nextx][nexty] == (i + 2) % 4){
+                    break;
+                }
+            }
+            if(currx == tailx && curry == taily){
+                return 0;
+            }
+            assert(i < 4);
+            currx = nextx;
+            curry = nexty;
+        }
+        return 1;
+    }
+    else if(featureType == 1){
+        int dist[boardx * boardy];
+        BFS(dist, headx, heady);
+        if(dist[applex * boardy + appley] != -1){
+            return 1;
+        }
+        return 0;
+    }
+    else if(featureType == 2){
+        int dist[boardx * boardy];
+        BFS(dist, headx, heady);
+        if(dist[tailx * boardy + taily] != -1){
+            return 1;
+        }
+        return 0;
+    }
+    else if(featureType == 3){
+        return distance(0);
+    }
+    else if(featureType == 4){
+        return distance(1);
+    }
+    else if(featureType == 5){
+        int dist[boardx * boardy];
+        for(int i=0; i<boardx * boardy; i++){
+            dist[i] = -1;
+        }
+        int numConn = 0;
+        for(int i=0; i<boardx; i++){
+            for(int j=0; j<boardy; j++){
+                if(dist[i * boardy + j] == -1 && snake[i][j] == -1){
+                    numConn++;
+                    BFS(dist, i, j, false);
+                }
+            }
+        }
+        return numConn;
+    }
+    // Not very impactful
+    /*
+    if(actionType == 0){
+        return -1;
+    }
+    int numInvalidActions = 0;
+    int invalidAction;
+    for(int i=0; i<4; i++){
+        int nextx = headx + dir[i][0];
+        int nexty = heady + dir[i][1];
+        if(nextx == -1 || nextx == boardx || nexty == -1 || nexty == boardy){
+            numInvalidActions++;
+            invalidAction = i;
+        }
+    }
+    if(numInvalidActions != 1){
+        return -1;
+    }
+    int prevx = headx - dir[invalidAction][0];
+    int prevy = heady - dir[invalidAction][1];
+    if(snake[prevx][prevy] == invalidAction){
+        return 1;
+    }
+    return 0;
+    */
+    assert(false);
+    return -1;
+}
+
+double Environment::distance(int featureType){
+    if(actionType == 1){
+        return -1;
+    }
+    if(featureType == 0){
+        return abs(headx - applex) + abs(heady - appley);
+    }
+    else if(featureType == 1){
+        Environment env;
+        env.copyEnv(this);
+        int dist[boardx * boardy];
+        env.BFS(dist, applex, appley);
+        bool possible = false;
+        for(int d=0; d<4; d++){
+            int nextx = env.headx + dir[d][0];
+            int nexty = env.heady + dir[d][1];
+            if(env.validAgentAction(d) && dist[nextx * boardy + nexty] != -1){
+                possible = true;
+                break;
+            }
+        }
+        if(!possible){
+            return -1;
+        }
+        for(int i=0; true; i++){
+            if(env.actionType == 1){
+                if(i < distance(0)){
+                    cout<<i<<' '<<distance(0)<<'\n';
+                    log();
+                }
+                assert(i >= distance(0));
+                return i;
+            }
+            /*
+            cout<<"LOG:\n";
+            for(int i=0; i<10; i++){
+                for(int j=0; j<10; j++){
+                    cout<<dist[i * boardy + j]<<'\t';
+                }
+                cout<<'\n';
+            }
+            env.log();
+            */
+            env.BFS(dist, applex, appley);
+            int minIndex = -1;
+            int minDist = 1000;
+            for(int d=0; d<4; d++){
+                int nextx = env.headx + dir[d][0];
+                int nexty = env.heady + dir[d][1];
+                if(env.validAgentAction(d) && dist[nextx * boardy + nexty] < minDist && dist[nextx * boardy + nexty] != -1){
+                    minDist = dist[nextx * boardy + nexty];
+                    minIndex = d;
+                }
+            }
+            assert(minIndex != -1);
+            assert(env.validAgentAction(minIndex));
+            //cout<<"ACTION: "<<minIndex<<'\n';
+            //env.log();
+            env.agentAction(minIndex);
+            
+        }
+    }
+    assert(false);
+    return -1;
+}
+
+int Environment::lastAction(){
+    int nextx, nexty;
+    int i;
+    for(i=0; i<4; i++){
+        nextx = headx + dir[i][0];
+        nexty = heady + dir[i][1];
+        if(nextx == -1 || nextx == boardx){
+            continue;
+        }
+        if(nexty == -1 || nexty == boardy){
+            continue;
+        }
+        if(snake[nextx][nexty] == (i + 2) % 4){
+            break;
+        }
+    }
+    return i;
+}
+
+double Environment::features2(Environment* nextState, int featureType){
+    if(featureType < 2){
+        if(actionType == 1){
+            return -1;
+        }
+        if(nextState->distance(featureType) < distance(featureType)){
+            return 1;
+        }
+        return 0;
+    }
+    else if(featureType == 2){
+        if((lastAction() - nextState->lastAction()) % 2 == 1){
+            return 1;
+        }
+        return 0;
+    }
+}
