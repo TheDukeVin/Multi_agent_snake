@@ -70,7 +70,7 @@ void Trainer::initializeNode(Environment& env, int currNode){
     }
 }
 
-Environment* Trainer::trainTree(){
+void Trainer::trainTree(int threadID){
     double search_values[maxTime*2];
     double search_policies[maxTime*2][numAgentActions];
     for(int i=0; i<maxTime*2; i++){
@@ -86,8 +86,8 @@ Environment* Trainer::trainTree(){
     
     roots[0].initialize();
     rootIndex = 0;
-    ofstream fout(valueLog, ios::app);
-    fout<<(roots[0].applex * boardy + roots[0].appley)<<' ';
+    //ofstream fout(valueLog, ios::app);
+    //fout<<(roots[0].applex * boardy + roots[0].appley)<<' ';
     initializeNode(roots[0], 0);
     index = 1;
     
@@ -122,12 +122,12 @@ Environment* Trainer::trainTree(){
         }
         roots[rootState+1].setAction(&roots[rootState], chosenAction);
         rootIndex = outcomes[rootIndex][chosenAction];
-        fout<<chosenAction<<' ';
+        //fout<<chosenAction<<' ';
         if(roots[rootState+1].isEndState()){
             break;
         }
     }
-    fout<<"\n";
+    //fout<<"\n";
 
     int numStates = rootState + 2;
     Data* game = new Data[numStates];
@@ -144,8 +144,10 @@ Environment* Trainer::trainTree(){
             game[i].expectedPolicy[j] = search_policies[i][j];
         }
     }
-    dq->enqueue(game, numStates);
-
+    //dq->enqueue(game, numStates);
+    tout->gameLength[threadID] = numStates;
+    tout->games[threadID] = game;
+/*
     for(int i=0; i<numStates; i++){
         fout<<game[i].expectedValue<<' ';
     }
@@ -179,7 +181,7 @@ Environment* Trainer::trainTree(){
 
     fout.close();
 
-    return &roots[numStates-1];
+    return &roots[numStates-1];*/
 }
 
 void Trainer::expandPath(){

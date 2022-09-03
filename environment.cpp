@@ -498,4 +498,6 @@ double Environment::features2(Environment* nextState, int featureType){
         }
         return 0;
     }
+    assert(false);
+    return -1;
 }

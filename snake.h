@@ -7,6 +7,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <thread>
 #include <stdlib.h>
 #include <math.h>
 #include <ctime>
@@ -276,6 +277,7 @@ public:
     }
     
     // For network usage and training
+    void copyParam(Agent& a);
     void setupCommonBranch();
     void setup();
     void resetGradient();
@@ -363,6 +365,12 @@ public:
     vector<int> readGames(); // returns the maximum score out of the games read.
 };
 
+class ThreadOutput{
+public:
+    int gameLength[NUM_THREADS];
+    Data* games[NUM_THREADS];
+};
+
 // Trainer
 
 class Trainer{
@@ -372,14 +380,14 @@ public:
     double actionTemperature = 1;
     
     Agent a;
-    double exploitationFactor;
+    ThreadOutput* tout;
     
     string gameLog;
     string valueLog;
     
-    Trainer(DataQueue* givendq){
+    Trainer(DataQueue* givendq, ThreadOutput* givenTout){
         dq = givendq;
-        exploitationFactor = 1;
+        tout = givenTout;
         for(int i=0; i<maxStates; i++){
             outcomes[i] = NULL;
         }
@@ -402,7 +410,7 @@ public:
     double actionProbs[numAgentActions];
     
     void initializeNode(Environment& env, int currNode);
-    Environment* trainTree(); // returns pointer to final environment in game sequence
+    void trainTree(int threadID); // adds game to thread storage.
     
     int path[maxStates];
     double rewards[maxTime*2];

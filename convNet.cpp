@@ -579,3 +579,11 @@ void Agent::readNet(string fileName){
     }
     netIn->close();
 }
+
+void Agent::copyParam(Agent& a){
+    for(int l=0; l<numLayers; l++){
+        for(int i=0; i<layers[l]->numParams; i++){
+            layers[l]->params[i] = a.layers[l]->params[i];
+        }
+    }
+}

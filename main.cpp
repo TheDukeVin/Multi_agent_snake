@@ -9,7 +9,8 @@ Uses MARL framework.
 
 // dq is too big to be defined in the Trainer class, so it is defined outside.
 DataQueue dq;
-Trainer t(&dq);
+Trainer* trainers[NUM_THREADS];
+ThreadOutput tout;
 
 unsigned long start_time;
 
@@ -98,9 +99,19 @@ void testNet(){
     }
 }
 
+void runThread(int j){
+    trainers[j]->trainTree(j);
+}
+
 void trainCycle(){
     cout<<"Beginning training: "<<time(NULL)<<'\n';
-    standardSetup(t.a);
+    Agent a;
+    standardSetup(a);
+    for(int i=0; i<NUM_THREADS; i++){
+        trainers[i] = new Trainer(&dq, &tout);
+        trainers[i]->actionTemperature = 2;
+        standardSetup(trainers[i]->a);
+    }
 
     //cout<<"Reading net:\n";
     //t.a.readNet("snakeConv.in");
@@ -110,7 +121,7 @@ void trainCycle(){
     dq.index = 0;
     dq.momentum = 0.7;
     dq.learnRate = 0.001;
-    t.actionTemperature = 2;
+    //t.actionTemperature = 2;
     
     //cout<<"Reading games\n";
     //vector<int> scores = dq.readGames(); // read games from games.in file.
@@ -130,53 +141,67 @@ void trainCycle(){
     hold3.close();
     ofstream hold4(scoreLog);
     hold4.close();
-    t.valueLog = valueLog;
+    //t.valueLog = valueLog;
     
-    for(int i=1; i<=numGames; i++){
+    for(int i=1; i<=numGames; ){
         ofstream valueOut(valueLog, ios::app);
         valueOut<<"Game "<<i<<' '<<time(NULL)<<'\n';
         valueOut.close();
 
-        Environment* result = t.trainTree();
-        double score = result->snakeSize;
-        sum += score;
-        if(score == boardx*boardy){
-            completions++;
-            completionTime += result->timer;
+        thread** threads = new thread*[NUM_THREADS];
+        for(int j=0; j<NUM_THREADS; j++){
+            trainers[j]->a.copyParam(a);
+            threads[j] = new thread(runThread, j);
+        }
+        for(int j=0; j<NUM_THREADS; j++){
+            threads[j]->join();
+            dq.enqueue(tout.games[j], tout.gameLength[j]);
         }
 
-        cout<<i<<':'<<score<<' ';
-        
-        ofstream summaryOut(summaryLog, ios::app);
-        summaryOut<<i<<':'<<score<<' '<<result->timer<<'\n';
-        summaryOut.close();
+        for(int j=0; j<NUM_THREADS; j++){
+            Environment* result = &tout.games[j][tout.gameLength[j]-1].e;
+            double score = result->snakeSize;
+            sum += score;
+            if(score == boardx*boardy){
+                completions++;
+                completionTime += result->timer;
+            }
 
-        scores.push_back(score);
-        ofstream scoreOut(scoreLog);
-        for(int s=0; s<scores.size(); s++){
-            if(s > 0){
-                scoreOut<<',';
+            cout<<i<<':'<<score<<' ';
+            
+            ofstream summaryOut(summaryLog, ios::app);
+            summaryOut<<i<<':'<<score<<' '<<result->timer<<' '<<(time(NULL) - start_time)<<'\n';
+            summaryOut.close();
+
+            scores.push_back(score);
+            ofstream scoreOut(scoreLog);
+            for(int s=0; s<scores.size(); s++){
+                if(s > 0){
+                    scoreOut<<',';
+                }
+                scoreOut<<scores[s];
             }
-            scoreOut<<scores[s];
-        }
-        scoreOut<<'\n';
-        scoreOut.close();
-        if(i>0 && i%evalPeriod == 0){
-            cout<<"\nAVERAGE: "<<(sum / evalPeriod)<<" in iteration "<<i<<'\n';
-            cout<<"Completions: "<<((double) completions / evalPeriod)<<'\n';
-            if(completions > 0){
-                cout<<"Average completion time: "<<(completionTime / completions)<<'\n';
+            scoreOut<<'\n';
+            scoreOut.close();
+            if(i>0 && i%evalPeriod == 0){
+                cout<<"\nAVERAGE: "<<(sum / evalPeriod)<<" in iteration "<<i<<'\n';
+                cout<<"Completions: "<<((double) completions / evalPeriod)<<'\n';
+                if(completions > 0){
+                    cout<<"Average completion time: "<<(completionTime / completions)<<'\n';
+                }
+                cout<<" TIMESTAMP: "<<(time(NULL) - start_time)<<'\n';
+                sum = 0;
+                completions = 0;
+                completionTime = 0;
             }
-            cout<<" TIMESTAMP: "<<(time(NULL) - start_time)<<'\n';
-            sum = 0;
-            completions = 0;
-            completionTime = 0;
-        }
-        if(i % storePeriod == 0){
-            t.a.save("nets/Game" + to_string(i) + ".out");
+            if(i % storePeriod == 0){
+                a.save("nets/Game" + to_string(i) + ".out");
+            }
+            
+            dq.trainAgent(a);
+            i++;
         }
         
-        dq.trainAgent(t.a);
     }
 }
 
@@ -197,8 +222,8 @@ void evaluate(){
 }
 
 void exportGames(){
-    standardSetup(t.a);
-    t.a.readNet("snakeConv.in");
+    //standardSetup(t.a);
+    //t.a.readNet("snakeConv.in");
     //t.exportGame();
 }
 

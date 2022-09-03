@@ -98,3 +98,9 @@ https://github.blog/2017-06-27-git-lfs-2-2-0-released/
 7/27/22
 
 It seems that increasing batchSize to 1000 doesn't affect the effectiveness of the training. batchSize=100 seems to be the best way to go for discountFactor=0.98.
+
+9/3//22
+
+With Threads:
+
+g++ -std=c++11 -pthread main.cpp data.cpp convNet.cpp environment.cpp InputLayerCode.cpp trainer.cpp
