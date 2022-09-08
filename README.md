@@ -7,4 +7,4 @@ To run, use the following command to compile all files:
 g++ -std=c++11 -pthread main.cpp data.cpp convNet.cpp environment.cpp InputLayerCode.cpp trainer.cpp
 ```
 
-and execute `./a.out`.
+and execute `./a.out`. The current version uses multithreading and can run on larger systems to accelerate the training.
