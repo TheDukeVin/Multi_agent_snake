@@ -7,7 +7,7 @@
 
 #include "snake.h"
 
-
+/*
 
 void Trainer::initializeNode(Environment& env, int currNode){
     if(outcomes[currNode] != NULL){
@@ -27,29 +27,29 @@ void Trainer::initializeNode(Environment& env, int currNode){
     sumScore[currNode] = 0;
     
     // Evaluate the network at the current node.
-/*
+
     // Use learned features
 
-    values[currNode] = 3 + env.getReward()
-                         + ((env.features(2) - 1) * 4) 
-                         - (env.features(3) * 0.1) 
-                         + (1 - env.features(5));
-
-    if(env.actionType == 0){
-        int numValidActions = 0;
-        for(int d=0; d<numAgentActions; d++){
-            numValidActions ++;
-        }
-        for(int d=0; d<numAgentActions; d++){
-            if(outcomes[currNode][d] != -2){
-                policy[currNode][d] = 1.0 / numValidActions;
-            }
-            else{
-                policy[currNode][d] = -1;
-            }
-        }
-    }
-    */
+//    values[currNode] = 3 + env.getReward()
+//                         + ((env.features(2) - 1) * 4)
+//                         - (env.features(3) * 0.1)
+//                         + (1 - env.features(5));
+//
+//    if(env.actionType == 0){
+//        int numValidActions = 0;
+//        for(int d=0; d<numAgentActions; d++){
+//            numValidActions ++;
+//        }
+//        for(int d=0; d<numAgentActions; d++){
+//            if(outcomes[currNode][d] != -2){
+//                policy[currNode][d] = 1.0 / numValidActions;
+//            }
+//            else{
+//                policy[currNode][d] = -1;
+//            }
+//        }
+//    }
+    
     
     int symID = rand()%8;
     env.inputSymmetric(a, symID);
@@ -70,7 +70,7 @@ void Trainer::initializeNode(Environment& env, int currNode){
     }
 }
 
-void Trainer::trainTree(int threadID){
+void Trainer::trainTree(){
     double search_values[maxTime*2];
     double search_policies[maxTime*2][numAgentActions];
     for(int i=0; i<maxTime*2; i++){
@@ -145,43 +145,43 @@ void Trainer::trainTree(int threadID){
         }
     }
     //dq->enqueue(game, numStates);
-    tout->gameLength[threadID] = numStates;
-    tout->games[threadID] = game;
-/*
-    for(int i=0; i<numStates; i++){
-        fout<<game[i].expectedValue<<' ';
-    }
-    fout<<"\n";
-    
-    for(int i=0; i<numStates; i++){
-        fout<<values[rootIndices[i]]<<' ';
-    }
-    fout<<"\n";
-    
-    search_values[numStates - 1] = game[numStates - 1].e.getReward();
-    for(int i=0; i<numStates; i++){
-        fout<<search_values[i];
-        if(i != numStates-1) fout<<' ';
-    }
-    fout<<"\n";
-    
-    for(int i=0; i<numStates; i++){
-        for(int j=0; j<numAgentActions; j++){
-            fout<<policy[rootIndices[i]][j]<<' ';
-        }
-    }
-    fout<<"\n";
-    
-    for(int i=0; i<numStates; i++){
-        for(int j=0; j<numAgentActions; j++){
-            fout<<search_policies[i][j]<<' ';
-        }
-    }
-    fout<<"\n";
+    output_gameLength = numStates;
+    output_game = game;
 
-    fout.close();
-
-    return &roots[numStates-1];*/
+//    for(int i=0; i<numStates; i++){
+//        fout<<game[i].expectedValue<<' ';
+//    }
+//    fout<<"\n";
+//
+//    for(int i=0; i<numStates; i++){
+//        fout<<values[rootIndices[i]]<<' ';
+//    }
+//    fout<<"\n";
+//
+//    search_values[numStates - 1] = game[numStates - 1].e.getReward();
+//    for(int i=0; i<numStates; i++){
+//        fout<<search_values[i];
+//        if(i != numStates-1) fout<<' ';
+//    }
+//    fout<<"\n";
+//
+//    for(int i=0; i<numStates; i++){
+//        for(int j=0; j<numAgentActions; j++){
+//            fout<<policy[rootIndices[i]][j]<<' ';
+//        }
+//    }
+//    fout<<"\n";
+//
+//    for(int i=0; i<numStates; i++){
+//        for(int j=0; j<numAgentActions; j++){
+//            fout<<search_policies[i][j]<<' ';
+//        }
+//    }
+//    fout<<"\n";
+//
+//    fout.close();
+//
+//    return &roots[numStates-1];
 }
 
 void Trainer::expandPath(){
@@ -279,21 +279,21 @@ void Trainer::expandPath(){
 }
 
 void Trainer::printTree(){
-    /*
-    ofstream fout(outAddress, ios::app);
-    for(int i=0; i<index; i++){
-        fout<<"State "<<i<<'\n';
-        states[i].print();
-        fout<<"Outcomes: ";
-        for(int j=0; j<numActions[states[i].actionType]; j++){
-            fout<<outcomes[i][j];
-        }
-        fout<<'\n';
-        fout<<"Size: "<<size[i]<<'\n';
-        fout<<"Sum score: "<<sumScore[i]<<'\n';
-        fout<<'\n';
-    }
-    fout.close();*/
+    
+//    ofstream fout(outAddress, ios::app);
+//    for(int i=0; i<index; i++){
+//        fout<<"State "<<i<<'\n';
+//        states[i].print();
+//        fout<<"Outcomes: ";
+//        for(int j=0; j<numActions[states[i].actionType]; j++){
+//            fout<<outcomes[i][j];
+//        }
+//        fout<<'\n';
+//        fout<<"Size: "<<size[i]<<'\n';
+//        fout<<"Sum score: "<<sumScore[i]<<'\n';
+//        fout<<'\n';
+//    }
+//    fout.close();
 }
 
 void Trainer::computeActionProbs(){
@@ -360,3 +360,4 @@ int Trainer::getRandomChanceAction(Environment* e){
     return possibleActions[rand() % numPossibleActions];
 }
 
+*/

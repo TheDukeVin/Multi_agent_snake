@@ -8,9 +8,12 @@ Uses MARL framework.
 #include "snake.h"
 
 // dq is too big to be defined in the Trainer class, so it is defined outside.
+/*
 DataQueue dq;
 Trainer* trainers[NUM_THREADS];
-ThreadOutput tout;
+
+thread* threads[NUM_THREADS];
+*/
 
 unsigned long start_time;
 
@@ -36,25 +39,32 @@ void printArray(double* A, int size){
     cout<<'\n';
 }
 
+double getError(Agent& net){
+    double error = squ(net.valueOutput - net.valueExpected);
+    for(int i=0; i<4; i++){
+        if(net.validAction[i]){
+            error -= net.policyExpected[i] * log(net.policyOutput[i]);
+        }
+    }
+    return error;
+}
+
 void testNet(){
     cout<<"Testing net:\n";
     Agent net;
     standardSetup(net);
     net.randomize(0.5);
+
     for(int i=0; i<boardx; i++){
         for(int j=0; j<boardy; j++){
-            net.input->snake[i][j] = rand() % 5 - 1;
+            net.input->snake[i][j] = rand() % 14 - 1;
         }
-    }
-    for(int i=0; i<3; i++){
-        for(int j=0; j<2; j++){
-            net.input->pos[i][j] = rand() % boardx;
-        }
-        //net.input->param[i] = (double) rand() / RAND_MAX;
     }
     for(int i=0; i<4; i++){
         net.validAction[i] = rand() % 2;
     }
+    net.validAction[rand() % 4] = 1;
+
     net.valueExpected = (double) rand() / RAND_MAX;
     double sum = 0;
     for(int i=0; i<4; i++){
@@ -72,13 +82,8 @@ void testNet(){
     }
     
     net.pass(PASS_FULL);
-    
-    double base = squ(net.valueOutput - net.valueExpected);
-    for(int i=0; i<4; i++){
-        if(net.validAction[i]){
-            base -= net.policyExpected[i] * log(net.policyOutput[i]);
-        }
-    }
+    double base = getError(net);
+
     net.backProp(PASS_FULL);
     double ep = 0.000001;
     
@@ -87,40 +92,39 @@ void testNet(){
             net.layers[l]->params[i] += ep;
             net.pass(PASS_FULL);
             net.layers[l]->params[i] -= ep;
-            double new_error = squ(net.valueOutput - net.valueExpected);
-            for(int j=0; j<4; j++){
-                if(net.validAction[j]){
-                    new_error -= net.policyExpected[j] * log(net.policyOutput[j]);
-                }
-            }
+            double new_error = getError(net);
             //cout<< ((new_error - base) / ep) << ' ' << net.layers[l]->Dparams[i]<<'\n';
-            assert( abs((new_error - base) / ep - net.layers[l]->Dparams[i]) < 0.0001);
+            assert( abs((new_error - base) / ep - net.layers[l]->Dparams[i]) < 0.01);
         }
     }
 }
-
-void runThread(int j){
-    trainers[j]->trainTree(j);
+/*
+void runThread(Trainer* t){
+    t->trainTree();
 }
-
+*/
 void trainCycle(){
+    /*
     cout<<"Beginning training: "<<time(NULL)<<'\n';
     Agent a;
     standardSetup(a);
     for(int i=0; i<NUM_THREADS; i++){
-        trainers[i] = new Trainer(&dq, &tout);
-        trainers[i]->actionTemperature = 2;
+        trainers[i] = new Trainer();
         standardSetup(trainers[i]->a);
+        //running[i] = 0;
+        //threads[i] = new thread(runThread, i, trainers[i]);
     }
 
     //cout<<"Reading net:\n";
     //t.a.readNet("snakeConv.in");
 
-    const int storePeriod = 50;
+    const int storePeriod = 1000;
     
     dq.index = 0;
+    dq.currSize = 500;
     dq.momentum = 0.7;
     dq.learnRate = 0.001;
+    double explorationConstant = 0.5;
     //t.actionTemperature = 2;
     
     //cout<<"Reading games\n";
@@ -133,6 +137,7 @@ void trainCycle(){
     double completionTime = 0;
     
     string summaryLog = "summary.out";
+    string controlLog = "control.out";
     string valueLog = "details.out";
     string scoreLog = "scores.out";
     ofstream hold2(summaryLog);
@@ -141,6 +146,8 @@ void trainCycle(){
     hold3.close();
     ofstream hold4(scoreLog);
     hold4.close();
+    ofstream hold5(controlLog);
+    hold5.close();
     //t.valueLog = valueLog;
     
     for(int i=1; i<=numGames; ){
@@ -148,26 +155,29 @@ void trainCycle(){
         valueOut<<"Game "<<i<<' '<<time(NULL)<<'\n';
         valueOut.close();
 
-        thread** threads = new thread*[NUM_THREADS];
         for(int j=0; j<NUM_THREADS; j++){
+            //lock_guard<mutex> lk(m[j]);
             trainers[j]->a.copyParam(a);
-            threads[j] = new thread(runThread, j);
+            trainers[j]->explorationConstant = explorationConstant;
+            //running[j] = 1;
+            //cv[j].notify_one();
+            threads[j] = new thread(runThread, trainers[j]);
         }
         for(int j=0; j<NUM_THREADS; j++){
+            //unique_lock<mutex> lk(m[j]);
+            //while(running[j] == 1) cv[j].wait(lk);
             threads[j]->join();
-            dq.enqueue(tout.games[j], tout.gameLength[j]);
+            dq.enqueue(trainers[j]->output_game, trainers[j]->output_gameLength);
         }
 
         for(int j=0; j<NUM_THREADS; j++){
-            Environment* result = &tout.games[j][tout.gameLength[j]-1].e;
+            Environment* result = &(trainers[j]->output_game[trainers[j]->output_gameLength-1].e);
             double score = result->snakeSize;
             sum += score;
             if(score == boardx*boardy){
                 completions++;
                 completionTime += result->timer;
             }
-
-            cout<<i<<':'<<score<<' ';
             
             ofstream summaryOut(summaryLog, ios::app);
             summaryOut<<i<<':'<<score<<' '<<result->timer<<' '<<(time(NULL) - start_time)<<'\n';
@@ -184,12 +194,28 @@ void trainCycle(){
             scoreOut<<'\n';
             scoreOut.close();
             if(i>0 && i%evalPeriod == 0){
-                cout<<"\nAVERAGE: "<<(sum / evalPeriod)<<" in iteration "<<i<<'\n';
-                cout<<"Completions: "<<((double) completions / evalPeriod)<<'\n';
+                ofstream controlOut(controlLog, ios::app);
+                controlOut<<"\nAVERAGE: "<<(sum / evalPeriod)<<" in iteration "<<i<<'\n';
+                controlOut<<"Completions: "<<((double) completions / evalPeriod)<<'\n';
                 if(completions > 0){
-                    cout<<"Average completion time: "<<(completionTime / completions)<<'\n';
+                    controlOut<<"Average completion time: "<<(completionTime / completions)<<'\n';
                 }
-                cout<<" TIMESTAMP: "<<(time(NULL) - start_time)<<'\n';
+                controlOut<<" TIMESTAMP: "<<(time(NULL) - start_time)<<'\n';
+
+                if(sum / evalPeriod > 80){
+                    dq.currSize = max(2000, dq.currSize);
+                    explorationConstant = min(0.4, explorationConstant);
+                    controlOut<<"Queue set to "<<dq.currSize<<'\n';
+                    controlOut<<"Exploration constant set to "<<explorationConstant<<'\n';
+                }
+                if(sum / evalPeriod > 95){
+                    dq.currSize = max(10000, dq.currSize);
+                    explorationConstant = min(0.3, explorationConstant);
+                    controlOut<<"Queue set to "<<dq.currSize<<'\n';
+                    controlOut<<"Exploration constant set to "<<explorationConstant<<'\n';
+                }
+                controlOut.close();
+
                 sum = 0;
                 completions = 0;
                 completionTime = 0;
@@ -201,101 +227,65 @@ void trainCycle(){
             dq.trainAgent(a);
             i++;
         }
-        
     }
+    */
 }
 
-void evaluate(){
-    /*
-    standardSetup(t.a);
-    t.a.readNet("snakeConv.in");
-    t.evaluate();
+vector<Environment> nextStates(Environment e){
+    vector<Environment> states;
+    if(e.actionType == 0){
+        for(int i=0; i<numAgentActions; i++){
+            if(!e.validAgentAction(0, i)) continue;
+            for(int j=0; j<numAgentActions; j++){
+                if(!e.validAgentAction(1, j)) continue;
+                Environment newEnv = e;
+                newEnv.agentActions[0] = i;
+                newEnv.agentActions[1] = j;
+                newEnv.agentAction();
+                states.push_back(newEnv);
+            }
+        }
+    }
+    else{
+        for(int i=0; i<numChanceActions; i++){
+            if(!e.validChanceAction(i)) continue;
+            Environment newEnv = e;
+            newEnv.chanceAction(i);
+            states.push_back(newEnv);
+        }
+    }
     
-    ofstream fout4(outAddress);
-    fout4.close();
-    for(int i=0; i<1; i++){
-        ofstream fout(outAddress, ios::app);
-        fout<<"Printed game "<<i<<'\n';
-        fout.close();
-        //t.printGame();
+    return states;
+}
+
+void computeEnv(){
+    Environment env;
+    env.initialize();
+    list<Environment> queue;
+    queue.push_back(env);
+    unordered_map<Environment, bool, EnvHash> states;
+    vector<Environment> allStates;
+
+    while(queue.size() != 0){
+        Environment currEnv = queue.front();
+        //currEnv.log();
+        queue.pop_front();
+        if(currEnv.isEndState()){
+            continue;
+        }
+        for(auto nextEnv : nextStates(currEnv)){
+            if(states.find(nextEnv) == states.end()){
+                states[nextEnv] = true;
+                queue.push_back(nextEnv);
+                allStates.push_back(nextEnv);
+            }
+        }
+    }
+    cout<<"Number of states: "<<states.size()<<'\n';
+/*
+    for(int i=0; i<10; i++){
+        allStates[rand() % allStates.size()].log();
     }*/
-}
-
-void exportGames(){
-    //standardSetup(t.a);
-    //t.a.readNet("snakeConv.in");
-    //t.exportGame();
-}
-
-void analyze_results(){
-    cout<<"Reading games\n";
-    vector<int> scores = dq.readGames(); // read games from games.in file.
-    cout<<"Finished reading " << dq.index << " games\n";
-    int numData = dq.index;
-    double sumScore = 0;
-    int completions = 0;
-    int lastGames = 1000;
-    for(int i=numData-lastGames; i<numData; i++){
-        int score = dq.queue[i][dq.gameLengths[i] - 1].e.snakeSize;
-        sumScore += score;
-        if(score == 100){
-            completions++;
-        }
-    }
-    cout<<"Last " << lastGames << " average: "<<(sumScore / lastGames)<<'\n';
-    cout<<"Completions: "<<completions<<'\n';
-
-    ofstream fout("features.txt");
-    for(int i=0; i<numData; i++){
-        fout<<scores[i]<<'\t';
-    }
-    fout<<"\n";
-    for(int t=0; t<6; t++){
-        cout<<"Calculating feature "<<t<<'\n';
-        for(int i=0; i<numData; i++){
-            double featureSum = 0;
-            int count = 0;
-            for(int j=0; j<dq.gameLengths[i]; j++){
-                if(abs(dq.queue[i][j].e.snakeSize - 50) <= 10){
-                    int feature = dq.queue[i][j].e.features(t);
-                    if(feature >= 0){
-                        count++;
-                        featureSum += feature;
-                    }
-                }
-            }
-            if(count == 0){
-                fout<<"-1\t";
-            }
-            else{
-                fout<<(featureSum / count)<<'\t';
-            }
-        }
-        fout<<"\n";
-    }
-    for(int t=0; t<3; t++){
-        cout<<"Calculating feature change "<<t<<'\n';
-        for(int i=0; i<numData; i++){
-            double featureSum = 0;
-            int count = 0;
-            for(int j=0; j<dq.gameLengths[i]-1; j++){
-                if(abs(dq.queue[i][j].e.snakeSize - 50) <= 10){
-                    int feature = dq.queue[i][j].e.features2(&dq.queue[i][j+1].e,t);
-                    if(feature >= 0){
-                        count++;
-                        featureSum += feature;
-                    }
-                }
-            }
-            if(count == 0){
-                fout<<"-1\t";
-            }
-            else{
-                fout<<(featureSum / count)<<'\t';
-            }
-        }
-        fout<<"\n";
-    }
 }
 
 int main()
@@ -304,17 +294,23 @@ int main()
     start_time = time(NULL);
     
     /*
-    for(int i=0; i<10; i++){
+    for(int i=0; i<1; i++){
         testNet();
     }*/
     
-    trainCycle();
+    //trainCycle();
     
     //evaluate();
-    
-    //dq.readGames();
 
-    //analyze_results();
+    //computeEnv();
+
+    Environment env;
+    env.initialize();
+    env.log();
+
+    Agent a;
+    standardSetup(a);
+    env.inputSymmetric(a, 0, 1);
     
     return 0;
     

@@ -104,3 +104,29 @@ It seems that increasing batchSize to 1000 doesn't affect the effectiveness of t
 With Threads:
 
 g++ -std=c++11 -pthread main.cpp data.cpp convNet.cpp environment.cpp InputLayerCode.cpp trainer.cpp
+
+9/28/22
+
+To remove a directory, use
+
+rm -r -f some_folder
+
+To push a folder, use
+
+rsync -r some_folder username@host:./folder
+
+To request a cluster node, use 
+
+srun --pty -p test --mem 100 -t 0-01:00 /bin/bash
+
+10/12/22
+
+Compiling with optimizations
+
+g++ -O2 -std=c++11 -pthread main.cpp data.cpp convNet.cpp environment.cpp InputLayerCode.cpp trainer.cpp
+
+10/23/22
+
+Testing initial multiagent setting
+
+g++ -O2 -std=c++11 -pthread main.cpp environment.cpp convNet.cpp InputLayerCode.cpp

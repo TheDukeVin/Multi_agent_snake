@@ -10,15 +10,15 @@
 
 <body>
 
-<input type="file" name="inputfile"
+Upload game details file: <input type="file" name="inputfile"
     id="inputfile">
 
 <br>
 
-<input type="text" id="myText" value="Some text...">
+<input type="text" id="myText" value="Game number">
 
 <div class="panel">
-<canvas id="canvas" width="500" height="500" style="position:relative; top:50px; left:50px"></canvas>
+<canvas id="canvas" width="1000" height="600" style="position:relative; top:50px; left:50px"></canvas>
 </div>
 
 <script>
@@ -42,11 +42,11 @@ document.getElementById('inputfile')
 var canvas = document.getElementById('canvas');
 var ctx = canvas.getContext('2d');
  
-boardx = 10;
-boardy = 10;
-cellS = 40;
-windx = 500;
-windy = 500;
+boardx = 12;
+boardy = 12;
+cellS = 35;
+windx = 1000;
+windy = 600;
 marginx = (windx - boardx * cellS) / 2
 marginy = (windy - boardy * cellS) / 2
 border = 5
@@ -169,6 +169,34 @@ search_values  = []
 network_policy = []
 search_policy  = []
 
+endState = false
+paused = true
+
+env = new Environment();
+env.snake = [
+    [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
+    [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
+    [-1,  1,  2,  2,  2,  2,  2,  2,  2,  2,  2, -1],
+    [-1,  0,  0,  4, -1,  0,  0,  0,  0,  1,  3, -1],
+    [-1,  1,  2,  1,  2,  2,  2,  2,  2,  2,  3, -1],
+    [-1,  1,  3,  0,  0,  0,  0,  0,  0,  1,  3, -1],
+    [-1,  1,  3,  1,  2,  2,  2,  2,  2,  2,  3, -1],
+    [-1,  1,  3,  0,  0,  0,  0,  0,  0,  1,  3, -1],
+    [-1,  1,  3,  1,  2,  2,  2,  2,  2,  2,  3, -1],
+    [-1,  1,  3,  0,  0,  0,  0,  0,  0,  1,  3, -1],
+    [-1,  1,  3,  2,  2,  2,  2,  2,  2,  2,  3, -1],
+    [-1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  3, -1]
+]
+env.tailx = 3
+env.taily = 5
+env.headx = 3
+env.heady = 3
+env.applex = 0
+env.appley = 0
+
+currAction = 0
+currActionIndex = 0
+tick = 0
 endState = false
 paused = true
 
@@ -426,10 +454,10 @@ function draw(){
     drawLine("#fff", nextx - xSize, nexty - xSize, nextx + xSize, nexty + xSize, 3)
     drawLine("#fff", nextx - xSize, nexty + xSize, nextx + xSize, nexty - xSize, 3)
 
-    //fillText("Score: " + env.snakeSize.toString(), cText, textSize, windx/2, marginy/2)
-    //fillText("Timer: " + env.timer.toString(), cText, textSize, windx/2, marginy/2 + textSize * 1.5)
+    fillText("Score: " + env.snakeSize.toString(), cText, textSize, windx/2, marginy/2)
+    fillText("Timer: " + env.timer.toString(), cText, textSize, windx/2, marginy/2 + textSize * 1.5)
 
-/*
+
     fillText("Value", cValue, textSize, marginx/3, textSize)
     fillText(values[currActionIndex-2].toString(), cText, textSize, marginx*2/3, textSize)
     fillText("Search Value", cSearch, textSize, marginx/3, textSize*2)
@@ -460,12 +488,12 @@ function draw(){
             y = windy/2
             drawLine(cNetPolicy, x, y, x + dir[d][1] * network_policy[currActionIndex-2][d] * scale, y + dir[d][0] * network_policy[currActionIndex-2][d] * scale, 2)
         }
-    }*/
+    }
 }
 
 function update(){
     if(endState) return
-    if(gameID == -1) return
+    //if(gameID == -1) return
     draw()
     if(!paused){
         tick++
