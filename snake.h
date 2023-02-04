@@ -24,38 +24,42 @@
 
 using namespace std;
 
-//environment details
+// environment details
 
 #define numAgents 2
 
 #define boardx 10
 #define boardy 10
-#define maxTime 30
+#define maxTime 1000
 
 #define numAgentActions 4
-#define numChanceActions (boardx*boardy)
-#define maxNumActions (boardx*boardy)
+#define numChanceActions (boardx * boardy)
+#define maxNumActions (boardx * boardy)
 
-//training deatils
+#define discountFactor 0.98
+
+// network deatils
 
 #define maxNorm 100
 #define batchSize 100
 #define numBatches 30
 
-//#define scoreNorm 10
 #define queueSize 10000
 
-#define numGames 25000
+// training details
+
+#define maxStates (maxTime * 2 * numPaths)
+#define maxAgentQueue 20
+#define evalPeriod 400
+#define numEvalGames 10
+
+#define scoreNorm 20
+
+#define numGames ((maxAgentQueue - 1) * evalPeriod)
 #define numPaths 200
 
-#define maxStates (maxTime*2*numPaths)
-#define evalPeriod 100
-#define numEvalGames 100
-#define evalZscore 2
 
-#define discountFactor 0.98
-
-// Passing Value or Full
+// Passing Value or Full (or Policy)
 
 #define PASS_VALUE 0
 #define PASS_FULL 1
@@ -73,7 +77,11 @@ int max(int x, int y);
 
 double min(double x, double y);
 
-// double abs(double x);
+double abs(double x);
+
+// take a random sample from a distribution on 0,...,N-1
+// -1 represents an invalid value.
+int sampleDist(double* dist, int N);
 
 // For the network
 double randWeight(double startingParameterRange);
@@ -82,6 +90,42 @@ double nonlinear(double x);
 
 // If f = nonlinear, then this function is (f' \circ f^{-1}).
 double dinvnonlinear(double x);
+
+
+class Nash{
+public:
+    int N, M;
+    double** A;
+
+    const double rate = 1e-01;
+    const double alpha = 1;
+
+    double* p1;
+    double* p2;
+
+    double* grad1;
+    double* grad2;
+
+    double* next1;
+    double* next2;
+
+    Nash(){}
+
+    Nash(int N_, int M_){
+        initialize(N_, M_);
+    }
+    void find_equilibrium(int iter, double threshold);
+    double exploitabilty();
+    void evaluate(int size, int iter, int num_trial);
+
+private:
+    void initialize(int N_, int M_);
+    void compute_gradients(double* p1, double* p2);
+    void compute_step(double* p1, double* p2, double step_size);
+    void exp_step(double* policy, double* grad, double* next_policy, double step_size, int size);
+    void check_policy(double* policy, int size);
+};
+
 
 // Input to the network
 
@@ -370,7 +414,7 @@ public:
     void agentAction();
     void chanceAction(int actionIndex);
 
-    void setAction(Environment* currState, int actionIndex);
+    //void setAction(Environment* currState, int actionIndex);
     void inputSymmetric(Agent& net, int t, int activeAgent);
     //void copyEnv(Environment* e);
     void print();// optional function for debugging
@@ -408,23 +452,8 @@ public:
     }
 };
 
-/*
-struct KeyHasher
-{
-    size_t operator()(const Environment& env) const
-    {
-    using std::size_t;
-    using std::hash;
-    using std::string;
-
-    return ((hash<string>()(k.first)
-                ^ (hash<string>()(k.second) << 1)) >> 1)
-                ^ (hash<int>()(k.third) << 1);
-    }
-};*/
-
 // Data things
-/*
+
 class Data{
 public:
     Environment e;
@@ -452,16 +481,33 @@ public:
 
 // Trainer
 
+const int ACTIVE_AGENT = 0;
+const int ADVERSARY_AGENT = 1;
+
+const int TRAIN_MODE = 0;
+const int TEST_MODE = 1;
+
 class Trainer{
 public:
     
     double actionTemperature = 2;
     double explorationConstant = 0.5;
     
+    // Active agent has agentID 0.
+    // The adversary has agentID 1
     Agent a;
+
+    // Testing mode: test this agent against a competitor
+    Agent competitor;
+    
+    // Training mode:
+    int numAdversaries;
+    Agent adversaries[maxAgentQueue];
+    double advProb[maxAgentQueue];
 
     int output_gameLength;
     Data* output_game;
+    double total_reward; // for the active player.
     
     string gameLog;
     string valueLog;
@@ -474,6 +520,10 @@ public:
     
     //Storage for the tree:
     int* outcomes[maxStates];
+
+    double* actionSums[maxStates];
+    int* actionCounts[maxStates];
+
     int subtreeSize[maxStates];
     double sumScore[maxStates];
     Environment roots[maxTime*2];
@@ -484,14 +534,18 @@ public:
     // Implementing the tree search
     int index;
     int rootIndex, rootState;
+
+    // Sample an adversary and get an action.
+    int getAdversaryAction(Environment& env);
     
     // For executing a training iteration:
     double actionProbs[numAgentActions];
     
     void initializeNode(Environment& env, int currNode);
-    void trainTree();
+    void trainTree(int mode);
     
     int path[maxStates];
+    int pathActions[maxStates];
     double rewards[maxTime*2];
     int times[maxTime*2];
     
@@ -502,5 +556,5 @@ public:
     int sampleActionProbs();
     int getRandomChanceAction(Environment* e);
 };
-*/
+
 #endif /* snake_h */

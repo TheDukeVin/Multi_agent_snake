@@ -8,31 +8,6 @@
 
 #include "snake.h"
 
-double squ(double x){
-    return x * x;
-}
-
-int max(int x, int y){
-    if(x < y) return y;
-    return x;
-}
-
-double max(double x, double y){
-    if(x < y) return y;
-    return x;
-}
-
-double min(double x, double y){
-    if(x < y) return x;
-    return y;
-}
-
-/*
-double abs(double x){
-    if(x < 0) return -x;
-    return x;
-}*/
-
 double randWeight(double startingParameterRange){
     return (((double)rand() / RAND_MAX)*2-1) * startingParameterRange;
 }
@@ -540,7 +515,7 @@ void Agent::backProp(int mode){
                 policyBranch.Doutput[i] = 0;
             }
         }
-        if(abs(sum - 1) > 0.000001){
+        if(abs(sum - 1) > 1e-07){
             cout<<"Incorrect sum: "<<sum<<'\n';
             assert(false);
         }

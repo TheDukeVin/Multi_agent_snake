@@ -7,21 +7,24 @@
 
 #include "snake.h"
 
-/*
-
 Data::Data(Environment* givenEnv, double givenExpected){
-    e.copyEnv(givenEnv);
+    e = *givenEnv;
     expectedValue = givenExpected;
 }
 
 void Data::trainAgent(Agent& a){
     int symID = rand()%8;
-    e.inputSymmetric(a, symID);
+    e.inputSymmetric(a, symID, ACTIVE_AGENT);
     a.valueExpected = expectedValue;
     if(e.actionType == 0 && !e.isEndState()){
+        double sum = 0;
         for(int i=0; i<numAgentActions; i++){
             a.policyExpected[(symDir[symID][0]*i + symDir[symID][1] + 4) % 4] = expectedPolicy[i];
+            if(expectedPolicy[i] >= 0){
+                sum += expectedPolicy[i];
+            }
         }
+        assert(abs(sum - 1) < 1e-07);
         a.backProp(PASS_FULL);
     }
     else{
@@ -64,6 +67,8 @@ void DataQueue::trainAgent(Agent& a){
 }
 
 vector<int> DataQueue::readGames(){
+    return vector<int>();
+    /*
     ifstream fin("games.in");
     vector<int> scores;
     while(true){
@@ -147,5 +152,5 @@ vector<int> DataQueue::readGames(){
     }
     cout<<"\n\n";
     return scores;
+    */
 }
-*/

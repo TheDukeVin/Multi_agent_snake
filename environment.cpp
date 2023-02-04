@@ -99,12 +99,10 @@ void Environment::makeAction(int actionIndex){
     }*/
 }
 
-void Environment::setAction(Environment* currState, int actionIndex){
-    /*
-    copyEnv(currState);
-    makeAction(actionIndex);
-    */
-}
+// void Environment::setAction(Environment* currState, int actionIndex){
+//     copyEnv(currState);
+//     makeAction(actionIndex);
+// }
 
 void Environment::agentAction(){
     for(int i=0; i<numAgents; i++){
@@ -204,17 +202,17 @@ void Environment::inputSymmetric(Agent& net, int t, int activeAgent){
         }
     }
 
-    // logging agent's input for debugging:
-    for(int i=0; i<boardx; i++){
-        for(int j=0; j<boardy; j++){
-            cout<<a->snake[i][j]<<' ';
-        }
-        cout<<'\n';
-    }
-    for(int i=0; i<4; i++){
-        cout<<net.validAction[i]<<' ';
-    }
-    cout<<'\n';
+    // // logging agent's input for debugging:
+    // for(int i=0; i<boardx; i++){
+    //     for(int j=0; j<boardy; j++){
+    //         cout<<a->snake[i][j]<<' ';
+    //     }
+    //     cout<<'\n';
+    // }
+    // for(int i=0; i<4; i++){
+    //     cout<<net.validAction[i]<<' ';
+    // }
+    // cout<<'\n';
 }
 
 
@@ -323,6 +321,28 @@ void Environment::log(){ // optional function for debugging
 }
 
 void Environment::computeRewards(){
+    for(int i=0; i<numAgents; i++){
+        rewards[i] = 0;
+    }
+    for(int i=0; i<numAgents; i++){
+        bool surrounded = true;
+        for(int d=0; d<4; d++){
+            if(validAgentAction(i, d)){
+                surrounded = false;
+                break;
+            }
+        }
+        if(surrounded) rewards[i] -= 20;
+    }
+    for(int i=0; i<numAgents; i++){
+        if(apple == snakes[i].head){
+            rewards[i] ++;
+        }
+    }
+    // zero-sum
+    int diff = rewards[0] - rewards[1];
+    rewards[0] = diff;
+    rewards[1] = -diff;
     /*
     if(snakeSize == boardx * boardy) return 10;
     if(timer == maxTime) return 0;

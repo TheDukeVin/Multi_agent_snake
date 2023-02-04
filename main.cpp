@@ -8,12 +8,17 @@ Uses MARL framework.
 #include "snake.h"
 
 // dq is too big to be defined in the Trainer class, so it is defined outside.
-/*
+
 DataQueue dq;
 Trainer* trainers[NUM_THREADS];
-
 thread* threads[NUM_THREADS];
-*/
+
+Trainer testing_ground;
+
+// tournament[i][j] for i<j
+// i is adversary, j is active agent - score of active agent.
+
+double tournament[maxAgentQueue][maxAgentQueue];
 
 unsigned long start_time;
 
@@ -98,23 +103,32 @@ void testNet(){
         }
     }
 }
-/*
+
 void runThread(Trainer* t){
-    t->trainTree();
+    t->trainTree(TRAIN_MODE);
 }
-*/
+
 void trainCycle(){
-    /*
     cout<<"Beginning training: "<<time(NULL)<<'\n';
     Agent a;
     standardSetup(a);
+
+    // a.readNet("nets/Game1500.out");
+
     for(int i=0; i<NUM_THREADS; i++){
         trainers[i] = new Trainer();
         standardSetup(trainers[i]->a);
-        //running[i] = 0;
-        //threads[i] = new thread(runThread, i, trainers[i]);
+        trainers[i]->numAdversaries = 1;
+        standardSetup(trainers[i]->adversaries[0]);
+        // trainers[i]->adversaries[0].readNet("nets/Game1500.out");
+        trainers[i]->advProb[0] = 1;
     }
 
+    int tournament_size = 1;
+    standardSetup(testing_ground.a);
+    testing_ground.numAdversaries = 1;
+    standardSetup(testing_ground.adversaries[0]);
+    testing_ground.advProb[0] = 0;
     //cout<<"Reading net:\n";
     //t.a.readNet("snakeConv.in");
 
@@ -148,7 +162,6 @@ void trainCycle(){
     hold4.close();
     ofstream hold5(controlLog);
     hold5.close();
-    //t.valueLog = valueLog;
     
     for(int i=1; i<=numGames; ){
         ofstream valueOut(valueLog, ios::app);
@@ -156,28 +169,21 @@ void trainCycle(){
         valueOut.close();
 
         for(int j=0; j<NUM_THREADS; j++){
-            //lock_guard<mutex> lk(m[j]);
             trainers[j]->a.copyParam(a);
             trainers[j]->explorationConstant = explorationConstant;
-            //running[j] = 1;
-            //cv[j].notify_one();
             threads[j] = new thread(runThread, trainers[j]);
         }
         for(int j=0; j<NUM_THREADS; j++){
-            //unique_lock<mutex> lk(m[j]);
-            //while(running[j] == 1) cv[j].wait(lk);
             threads[j]->join();
             dq.enqueue(trainers[j]->output_game, trainers[j]->output_gameLength);
         }
 
         for(int j=0; j<NUM_THREADS; j++){
+            // get cumulative rewards
+            double score = trainers[j]->total_reward;
             Environment* result = &(trainers[j]->output_game[trainers[j]->output_gameLength-1].e);
-            double score = result->snakeSize;
+            // double score = result->snakes[0].size - result->snakes[1].size;
             sum += score;
-            if(score == boardx*boardy){
-                completions++;
-                completionTime += result->timer;
-            }
             
             ofstream summaryOut(summaryLog, ios::app);
             summaryOut<<i<<':'<<score<<' '<<result->timer<<' '<<(time(NULL) - start_time)<<'\n';
@@ -193,33 +199,80 @@ void trainCycle(){
             }
             scoreOut<<'\n';
             scoreOut.close();
-            if(i>0 && i%evalPeriod == 0){
-                ofstream controlOut(controlLog, ios::app);
-                controlOut<<"\nAVERAGE: "<<(sum / evalPeriod)<<" in iteration "<<i<<'\n';
-                controlOut<<"Completions: "<<((double) completions / evalPeriod)<<'\n';
-                if(completions > 0){
-                    controlOut<<"Average completion time: "<<(completionTime / completions)<<'\n';
-                }
-                controlOut<<" TIMESTAMP: "<<(time(NULL) - start_time)<<'\n';
 
-                if(sum / evalPeriod > 80){
-                    dq.currSize = max(2000, dq.currSize);
-                    explorationConstant = min(0.4, explorationConstant);
-                    controlOut<<"Queue set to "<<dq.currSize<<'\n';
-                    controlOut<<"Exploration constant set to "<<explorationConstant<<'\n';
+
+            // add an adversary
+            if(i>0 && i%evalPeriod == 0){
+                for(int t=0; t<tournament_size; t++){
+                    testing_ground.a.copyParam(a);
+                    testing_ground.adversaries[0].copyParam(trainers[0]->adversaries[t]);
+                    double sum = 0;
+                    for(int it=0; it<numEvalGames; it++){
+                        testing_ground.trainTree(TEST_MODE);
+                        sum += testing_ground.total_reward / scoreNorm;
+                    }
+                    tournament[t][tournament_size] = sum / numEvalGames;
                 }
-                if(sum / evalPeriod > 95){
-                    dq.currSize = max(10000, dq.currSize);
-                    explorationConstant = min(0.3, explorationConstant);
-                    controlOut<<"Queue set to "<<dq.currSize<<'\n';
-                    controlOut<<"Exploration constant set to "<<explorationConstant<<'\n';
+                tournament_size ++;
+
+                Nash NE(tournament_size, tournament_size);
+                for(int i_=0; i_<tournament_size; i_++){
+                    for(int j_=0; j_<tournament_size; j_++){
+                        NE[i_][j_] = tournament[i_][j_];
+                        NE[j_][i_] = -tournament[j_][i_];
+                    }
+                    NE[i_][i_] = 0;
                 }
+                NE.find_equilibrium();
+                ofstream controlOut(controlLog, ios::app);
+                controlOut << "Game "<<i<<'\n';
+                controlOut << "EXPLOITABILITY: " << NE.exploitabilty() << '\n';
                 controlOut.close();
 
-                sum = 0;
-                completions = 0;
-                completionTime = 0;
+                summaryOut << "Equilibrium: \n";
+                for(int k=0; k<tournament_size; k++){
+                    summaryOut << NE.p1[k] << ' ';
+                }
+                cout<<'\n';
+
+                for(int t=0; t<NUM_THREADS; t++){
+                    int numAdv = trainers[t]->numAdversaries;
+                    standardSetup(trainers[t]->adversaries[numAdv]);
+                    trainers[t]->adversaries[numAdv].copyParam(a);
+                    trainers[t]->numAdversaries++;
+                    for(int k=0; k<trainers[t]->numAdversaries; k++){
+                        trainers[t]->advProb[k] = NE.p1[k];
+                    }
+                }
             }
+            
+            // if(i>0 && i%evalPeriod == 0){
+            //     ofstream controlOut(controlLog, ios::app);
+            //     controlOut<<"\nAVERAGE: "<<(sum / evalPeriod)<<" in iteration "<<i<<'\n';
+            //     controlOut<<"Completions: "<<((double) completions / evalPeriod)<<'\n';
+            //     if(completions > 0){
+            //         controlOut<<"Average completion time: "<<(completionTime / completions)<<'\n';
+            //     }
+            //     controlOut<<" TIMESTAMP: "<<(time(NULL) - start_time)<<'\n';
+
+            //     if(sum / evalPeriod > 80){
+            //         dq.currSize = max(2000, dq.currSize);
+            //         explorationConstant = min(0.4, explorationConstant);
+            //         controlOut<<"Queue set to "<<dq.currSize<<'\n';
+            //         controlOut<<"Exploration constant set to "<<explorationConstant<<'\n';
+            //     }
+            //     if(sum / evalPeriod > 95){
+            //         dq.currSize = max(10000, dq.currSize);
+            //         explorationConstant = min(0.3, explorationConstant);
+            //         controlOut<<"Queue set to "<<dq.currSize<<'\n';
+            //         controlOut<<"Exploration constant set to "<<explorationConstant<<'\n';
+            //     }
+            //     controlOut.close();
+
+            //     sum = 0;
+            //     completions = 0;
+            //     completionTime = 0;
+            // }
             if(i % storePeriod == 0){
                 a.save("nets/Game" + to_string(i) + ".out");
             }
@@ -228,7 +281,7 @@ void trainCycle(){
             i++;
         }
     }
-    */
+    
 }
 
 vector<Environment> nextStates(Environment e){
@@ -298,19 +351,11 @@ int main()
         testNet();
     }*/
     
-    //trainCycle();
+    trainCycle();
     
     //evaluate();
 
     //computeEnv();
-
-    Environment env;
-    env.initialize();
-    env.log();
-
-    Agent a;
-    standardSetup(a);
-    env.inputSymmetric(a, 0, 1);
     
     return 0;
     

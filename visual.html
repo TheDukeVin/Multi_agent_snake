@@ -18,7 +18,7 @@ Upload game details file: <input type="file" name="inputfile"
 <input type="text" id="myText" value="Game number">
 
 <div class="panel">
-<canvas id="canvas" width="1000" height="600" style="position:relative; top:50px; left:50px"></canvas>
+<canvas id="canvas" width="420" height="420" style="position:relative; top:50px; left:50px"></canvas>
 </div>
 
 <script>
@@ -42,11 +42,11 @@ document.getElementById('inputfile')
 var canvas = document.getElementById('canvas');
 var ctx = canvas.getContext('2d');
  
-boardx = 12;
-boardy = 12;
-cellS = 35;
-windx = 1000;
-windy = 600;
+boardx = 10;
+boardy = 10;
+cellS = 40;
+windx = 420;
+windy = 420;
 marginx = (windx - boardx * cellS) / 2
 marginy = (windy - boardy * cellS) / 2
 border = 5
@@ -66,7 +66,7 @@ cHead = "fff"
 space = "#fff"
 cLine = "#000"
 cShade = "#eee"
-cSnake = "#00f"
+cSnake = ["#00f", "#070"]
 cApple = "#f00"
 cText = "#000"
 
@@ -78,35 +78,56 @@ cPolicy = "#66d"
 cNetPolicy = "#f0f"
 
 TIME_LIMIT = 1200
+NUM_AGENTS = 2
 
 function randint(max){
     return Math.floor(Math.random()*max)
 }
 
+class Pos{
+    constructor(x, y){
+        this.x = x
+        this.y = y
+    }
+}
+
+class Snake{
+    constructor(size, head, tail){
+        this.size = size
+        this.head = head
+        this.tail = tail
+    }
+}
+
 class Environment{
+
+    setGridValue(pos, val){
+        this.grid[pos.x][pos.y] = val;
+    }
+
     constructor(){
         this.timer = 0
         this.score = 0;
         this.actionType = 0;
-        this.snakeSize = 2;
-        this.headx = boardx/2;
-        this.heady = 2;
-        this.tailx = this.headx;
-        this.taily = 1;
+        this.snakes = [
+            new Snake(2, new Pos(boardx/2, 1), new Pos(boardx/2, 0)),
+            new Snake(2, new Pos(boardx/2, 8), new Pos(boardx/2, 9))
+        ]
 
-        this.snake = []
+        this.grid = []
         for(var i=0; i<boardx; i++){
-            this.snake[i] = []
+            this.grid[i] = []
             for(var j=0; j<boardy; j++){
-                this.snake[i][j] = -1;
+                this.grid[i][j] = -1;
             }
         }
-        this.snake[this.headx][this.heady] = 4;
-        this.snake[this.tailx][this.taily] = 0;
-        this.applex = 0;
-        this.appley = 0;
+        this.setGridValue(this.snakes[0].head, 4)
+        this.setGridValue(this.snakes[0].tail, 0)
+        this.setGridValue(this.snakes[1].head, 9)
+        this.setGridValue(this.snakes[1].tail, 7)
+        this.apple = new Pos(4, 4)
     }
-
+/*
     agentAction(actionIndex){
         this.timer ++
         var newHeadx = this.headx + dir[actionIndex][0];
@@ -157,10 +178,25 @@ class Environment{
             }
         }
         this.actionType = 0
-    }
+    }*/
 }
 
 env = new Environment();
+env.grid = [
+    [-1, -1, -1, -1,  1, -1, -1, -1, -1, -1],
+    [-1, -1, -1, -1,  4, -1, -1, -1, -1, -1],
+    [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
+    [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
+    [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
+    [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
+    [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
+    [-1, -1, -1, -1,  9, -1, -1, -1, -1, -1],
+    [-1, -1, -1, -1,  8, -1, -1, -1, -1, -1],
+    [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1]
+]
+
+env.snakes[0] = new Snake(2, new Pos(1, 4), new Pos(0, 4))
+env.snakes[1] = new Snake(2, new Pos(7, 4), new Pos(8, 4))
 
 actions        = []
 values         = []
@@ -171,28 +207,6 @@ search_policy  = []
 
 endState = false
 paused = true
-
-env = new Environment();
-env.snake = [
-    [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
-    [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
-    [-1,  1,  2,  2,  2,  2,  2,  2,  2,  2,  2, -1],
-    [-1,  0,  0,  4, -1,  0,  0,  0,  0,  1,  3, -1],
-    [-1,  1,  2,  1,  2,  2,  2,  2,  2,  2,  3, -1],
-    [-1,  1,  3,  0,  0,  0,  0,  0,  0,  1,  3, -1],
-    [-1,  1,  3,  1,  2,  2,  2,  2,  2,  2,  3, -1],
-    [-1,  1,  3,  0,  0,  0,  0,  0,  0,  1,  3, -1],
-    [-1,  1,  3,  1,  2,  2,  2,  2,  2,  2,  3, -1],
-    [-1,  1,  3,  0,  0,  0,  0,  0,  0,  1,  3, -1],
-    [-1,  1,  3,  2,  2,  2,  2,  2,  2,  2,  3, -1],
-    [-1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  3, -1]
-]
-env.tailx = 3
-env.taily = 5
-env.headx = 3
-env.heady = 3
-env.applex = 0
-env.appley = 0
 
 currAction = 0
 currActionIndex = 0
@@ -249,7 +263,6 @@ document.getElementById('myText')
         search_values  = split_to_float(lines[count + 3])
         network_policy = split_to_2d_float(lines[count + 4])
         search_policy  = split_to_2d_float(lines[count + 5])
-        //console.log(network_policy)
 
         env = new Environment();
         updateEnvironment(1)
@@ -414,46 +427,49 @@ function draw(){
             }
         }
     }
-    fillCirc(cApple, marginx + env.appley*cellS + cellS/2, marginy + env.applex*cellS + cellS/2, appleSize/2)
+    fillCirc(cApple, marginx + env.apple.y*cellS + cellS/2, marginy + env.apple.x*cellS + cellS/2, appleSize/2)
     for(i = 0; i < boardx; i++){
         for(j = 0; j < boardy; j++){
-            type = env.snake[i][j]
+            type = env.grid[i][j]
             if(type != -1){
+                snakeID = Math.floor(type / 5)
+                type = type % 5
                 centerx = marginx + j*cellS + cellS/2
                 centery = marginy + i*cellS + cellS/2
                 slideProp = tick / framesPerMove
                 if(i == env.tailx && j == env.taily && (env.headx + dir[currAction][0] != env.applex || env.heady + dir[currAction][1] != env.appley)){
                     nextx = centerx + dir[type][1] * cellS * slideProp
                     nexty = centery + dir[type][0] * cellS * slideProp
-                    fillCirc(cSnake, nextx, nexty, snakeWidth / 2)
-                    drawLine(cSnake, nextx, nexty, centerx + dir[type][1] * cellS, centery + dir[type][0] * cellS, snakeWidth)
+                    //fillCirc(cSnake[snakeID], nextx, nexty, snakeWidth / 2)
+                    drawLine(cSnake[snakeID], nextx, nexty, centerx + dir[type][1] * cellS, centery + dir[type][0] * cellS, snakeWidth)
                 }
                 else{
-                    fillCirc(cSnake, centerx, centery, snakeWidth / 2)
+                    fillCirc(cSnake[snakeID], centerx, centery, snakeWidth / 2)
                     if(type == 4){
                         nextDir = dir[currAction]
                         nextx = centerx + nextDir[1] * cellS * (tick / framesPerMove)
                         nexty = centery + nextDir[0] * cellS * (tick / framesPerMove)
-                        drawLine(cSnake, centerx, centery, nextx, nexty, snakeWidth)
-                        fillCirc(cSnake, nextx, nexty, snakeWidth / 2)
+                        drawLine(cSnake[snakeID], centerx, centery, nextx, nexty, snakeWidth)
+                        fillCirc(cSnake[snakeID], nextx, nexty, snakeWidth / 2)
                     }
                     else{
-                        drawLine(cSnake, centerx, centery, centerx + dir[type][1] * cellS, centery + dir[type][0] * cellS, snakeWidth)
+                        drawLine(cSnake[snakeID], centerx, centery, centerx + dir[type][1] * cellS, centery + dir[type][0] * cellS, snakeWidth)
                     }
                 }
             }
         }
     }
     // Draw the X
-    
-    centerx = marginx + env.heady*cellS + cellS/2
-    centery = marginy + env.headx*cellS + cellS/2
-    nextDir = dir[currAction]
-    nextx = centerx + nextDir[1] * cellS * (tick / framesPerMove)
-    nexty = centery + nextDir[0] * cellS * (tick / framesPerMove)
-    drawLine("#fff", nextx - xSize, nexty - xSize, nextx + xSize, nexty + xSize, 3)
-    drawLine("#fff", nextx - xSize, nexty + xSize, nextx + xSize, nexty - xSize, 3)
-
+    for(i=0; i<NUM_AGENTS; i++){
+        centerx = marginx + env.snakes[i].head.y*cellS + cellS/2
+        centery = marginy + env.snakes[i].head.x*cellS + cellS/2
+        nextDir = dir[currAction]
+        nextx = centerx + nextDir[1] * cellS * (tick / framesPerMove)
+        nexty = centery + nextDir[0] * cellS * (tick / framesPerMove)
+        drawLine("#fff", nextx - xSize, nexty - xSize, nextx + xSize, nexty + xSize, 3)
+        drawLine("#fff", nextx - xSize, nexty + xSize, nextx + xSize, nexty - xSize, 3)
+    }
+/*
     fillText("Score: " + env.snakeSize.toString(), cText, textSize, windx/2, marginy/2)
     fillText("Timer: " + env.timer.toString(), cText, textSize, windx/2, marginy/2 + textSize * 1.5)
 
@@ -488,7 +504,7 @@ function draw(){
             y = windy/2
             drawLine(cNetPolicy, x, y, x + dir[d][1] * network_policy[currActionIndex-2][d] * scale, y + dir[d][0] * network_policy[currActionIndex-2][d] * scale, 2)
         }
-    }
+    }*/
 }
 
 function update(){
