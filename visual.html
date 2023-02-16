@@ -79,6 +79,7 @@ cNetPolicy = "#f0f"
 
 TIME_LIMIT = 1200
 NUM_AGENTS = 2
+NUM_AGENT_ACTIONS = 4
 
 function randint(max){
     return Math.floor(Math.random()*max)
@@ -88,6 +89,14 @@ class Pos{
     constructor(x, y){
         this.x = x
         this.y = y
+    }
+
+    shift(d){
+        return new Pos(this.x + dir[d][0], this.y + dir[d][1])
+    }
+
+    inBounds(){
+        return 0 <= this.x && this.x < boardx && 0 <= this.y && this.y < boardy;
     }
 }
 
@@ -104,6 +113,9 @@ class Environment{
     setGridValue(pos, val){
         this.grid[pos.x][pos.y] = val;
     }
+    getGridValue(pos){
+        return this.grid[pos.x][pos.y];
+    }
 
     constructor(){
         this.timer = 0
@@ -113,6 +125,7 @@ class Environment{
             new Snake(2, new Pos(boardx/2, 1), new Pos(boardx/2, 0)),
             new Snake(2, new Pos(boardx/2, 8), new Pos(boardx/2, 9))
         ]
+        this.agentActions = [-1, -1]
 
         this.grid = []
         for(var i=0; i<boardx; i++){
@@ -127,76 +140,92 @@ class Environment{
         this.setGridValue(this.snakes[1].tail, 7)
         this.apple = new Pos(4, 4)
     }
-/*
-    agentAction(actionIndex){
-        this.timer ++
-        var newHeadx = this.headx + dir[actionIndex][0];
-        var newHeady = this.heady + dir[actionIndex][1];
-        this.snake[this.headx][this.heady] = actionIndex;
-        this.headx = newHeadx;
-        this.heady = newHeady;
-        this.snake[newHeadx][newHeady] = 4;
 
-        if(this.headx == this.applex && this.heady == this.appley){
-            this.score += 1;
-            //score += 1 - timer*0.5/maxTime;
-            this.snakeSize++;
-            this.actionType = 1;
+    agentAction(){
+        this.timer ++
+        for(var i=0; i<NUM_AGENTS; i++){
+            // console.log([i, this.agentActions[i]])
+            console.assert(this.validAgentAction(i, this.agentActions[i]));
         }
-        else{
-            var tailDir = this.snake[this.tailx][this.taily];
-            this.snake[this.tailx][this.taily] = -1;
-            this.tailx += dir[tailDir][0];
-            this.taily += dir[tailDir][1];
+
+        for(var i=0; i<NUM_AGENTS; i++){
+            var newHead = this.snakes[i].head.shift(this.agentActions[i]);
+            this.setGridValue(this.snakes[i].head, this.agentActions[i] + 5*i);
+            this.snakes[i].head = newHead;
+            this.setGridValue(newHead, 4 + 5*i);
+            if(newHead.x == this.apple.x && newHead.y == this.apple.y){
+                this.snakes[i].size ++;
+                this.actionType = 1;
+            }
+            else{
+                var tailDir = this.getGridValue(this.snakes[i].tail) - 5*i;
+                this.setGridValue(this.snakes[i].tail, -1);
+                this.snakes[i].tail = this.snakes[i].tail.shift(tailDir);
+            }
         }
+
+
+        // var newHeadx = this.headx + dir[actionIndex][0];
+        // var newHeady = this.heady + dir[actionIndex][1];
+        // this.snake[this.headx][this.heady] = actionIndex;
+        // this.headx = newHeadx;
+        // this.heady = newHeady;
+        // this.snake[newHeadx][newHeady] = 4;
+
+        // if(this.headx == this.applex && this.heady == this.appley){
+        //     this.score += 1;
+        //     //score += 1 - timer*0.5/maxTime;
+        //     this.snakeSize++;
+        //     this.actionType = 1;
+        // }
+        // else{
+        //     var tailDir = this.snake[this.tailx][this.taily];
+        //     this.snake[this.tailx][this.taily] = -1;
+        //     this.tailx += dir[tailDir][0];
+        //     this.taily += dir[tailDir][1];
+        // }
     }
 
     chanceAction(actionIndex){
-        this.applex = Math.floor(actionIndex / boardy);
-        this.appley = actionIndex % boardy;
+        this.apple.x = Math.floor(actionIndex / boardy);
+        this.apple.y = actionIndex % boardy;
         this.actionType = 0
     }
 
-    validAgentAction(d){
-        var newHeadx = this.headx + dir[d][0];
-        var newHeady = this.heady + dir[d][1];
-        if(newHeadx == -1 || newHeadx == boardx){
-            return false;
-        }
-        if(newHeady == -1 || newHeady == boardy){
-            return false;
-        }
-        return this.snake[newHeadx][newHeady] == -1;
+    validAgentAction(agentID, action){
+        // console.log(action)
+        var nbr = this.snakes[agentID].head.shift(action)
+        return nbr.inBounds() && (this.getGridValue(nbr) == -1);
     }
 
     randomChanceAction(){
-        while(true){
-            this.applex = randint(boardx)
-            this.appley = randint(boardy)
-            if(this.snake[this.applex][this.appley] == -1){
-                break
-            }
-        }
-        this.actionType = 0
-    }*/
+        // while(true){
+        //     this.applex = randint(boardx)
+        //     this.appley = randint(boardy)
+        //     if(this.snake[this.applex][this.appley] == -1){
+        //         break
+        //     }
+        // }
+        // this.actionType = 0
+    }
 }
 
 env = new Environment();
-env.grid = [
-    [-1, -1, -1, -1,  1, -1, -1, -1, -1, -1],
-    [-1, -1, -1, -1,  4, -1, -1, -1, -1, -1],
-    [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
-    [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
-    [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
-    [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
-    [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
-    [-1, -1, -1, -1,  9, -1, -1, -1, -1, -1],
-    [-1, -1, -1, -1,  8, -1, -1, -1, -1, -1],
-    [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1]
-]
+// env.grid = [
+//     [-1, -1, -1, -1,  1, -1, -1, -1, -1, -1],
+//     [-1, -1, -1, -1,  4, -1, -1, -1, -1, -1],
+//     [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
+//     [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
+//     [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
+//     [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
+//     [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
+//     [-1, -1, -1, -1,  9, -1, -1, -1, -1, -1],
+//     [-1, -1, -1, -1,  8, -1, -1, -1, -1, -1],
+//     [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1]
+// ]
 
-env.snakes[0] = new Snake(2, new Pos(1, 4), new Pos(0, 4))
-env.snakes[1] = new Snake(2, new Pos(7, 4), new Pos(8, 4))
+// env.snakes[0] = new Snake(2, new Pos(1, 4), new Pos(0, 4))
+// env.snakes[1] = new Snake(2, new Pos(7, 4), new Pos(8, 4))
 
 actions        = []
 values         = []
@@ -280,6 +309,11 @@ document.getElementById('myText')
         //console.log(env)
     })
 
+function makeAgentAction(action){
+    env.agentActions[0] = Math.floor(action / NUM_AGENT_ACTIONS)
+    env.agentActions[1] = action % NUM_AGENT_ACTIONS
+    env.agentAction()
+}
 
 function updateEnvironment(index){
     env = new Environment()
@@ -288,25 +322,25 @@ function updateEnvironment(index){
             env.chanceAction(actions[i])
         }
         else{
-            env.agentAction(actions[i])
+            makeAgentAction(actions[i])
         }
-        while(env.actionType == 0){
-            // Check if there is only one valid action
-            numValidActions = 0
-            validAction = -1
-            for(d = 0; d < 4; d++){
-                if(env.validAgentAction(d)){
-                    numValidActions++
-                    validAction = d
-                }
-            }
-            if(numValidActions == 1){
-                env.agentAction(validAction)
-            }
-            else{
-                break
-            }
-        }
+        // while(env.actionType == 0){
+        //     // Check if there is only one valid action
+        //     numValidActions = 0
+        //     validAction = -1
+        //     for(d = 0; d < 4; d++){
+        //         if(env.validAgentAction(d)){
+        //             numValidActions++
+        //             validAction = d
+        //         }
+        //     }
+        //     if(numValidActions == 1){
+        //         env.agentAction(validAction)
+        //     }
+        //     else{
+        //         break
+        //     }
+        // }
     }
 }
 
@@ -437,18 +471,28 @@ function draw(){
                 centerx = marginx + j*cellS + cellS/2
                 centery = marginy + i*cellS + cellS/2
                 slideProp = tick / framesPerMove
-                if(i == env.tailx && j == env.taily && (env.headx + dir[currAction][0] != env.applex || env.heady + dir[currAction][1] != env.appley)){
+                if(snakeID == 0){
+                    nextDir = Math.floor(currAction / NUM_AGENT_ACTIONS)
+                }
+                else{
+                    nextDir = currAction % NUM_AGENT_ACTIONS
+                }
+                if(nextDir >= NUM_AGENT_ACTIONS){
+                    console.log(currAction)
+                }
+                console.assert(nextDir < NUM_AGENT_ACTIONS)
+                if(i == env.snakes[snakeID].tail.x && j == env.snakes[snakeID].tail.y && (env.snakes[snakeID].head.x + dir[nextDir][0] != env.applex || env.snakes[snakeID].head.y + dir[nextDir][1] != env.appley)){
                     nextx = centerx + dir[type][1] * cellS * slideProp
                     nexty = centery + dir[type][0] * cellS * slideProp
-                    //fillCirc(cSnake[snakeID], nextx, nexty, snakeWidth / 2)
+                    fillCirc(cSnake[snakeID], nextx, nexty, snakeWidth / 2)
                     drawLine(cSnake[snakeID], nextx, nexty, centerx + dir[type][1] * cellS, centery + dir[type][0] * cellS, snakeWidth)
                 }
                 else{
                     fillCirc(cSnake[snakeID], centerx, centery, snakeWidth / 2)
                     if(type == 4){
-                        nextDir = dir[currAction]
-                        nextx = centerx + nextDir[1] * cellS * (tick / framesPerMove)
-                        nexty = centery + nextDir[0] * cellS * (tick / framesPerMove)
+                        // nextDir = dir[currAction]
+                        nextx = centerx + dir[nextDir][1] * cellS * (tick / framesPerMove)
+                        nexty = centery + dir[nextDir][0] * cellS * (tick / framesPerMove)
                         drawLine(cSnake[snakeID], centerx, centery, nextx, nexty, snakeWidth)
                         fillCirc(cSnake[snakeID], nextx, nexty, snakeWidth / 2)
                     }
@@ -463,9 +507,14 @@ function draw(){
     for(i=0; i<NUM_AGENTS; i++){
         centerx = marginx + env.snakes[i].head.y*cellS + cellS/2
         centery = marginy + env.snakes[i].head.x*cellS + cellS/2
-        nextDir = dir[currAction]
-        nextx = centerx + nextDir[1] * cellS * (tick / framesPerMove)
-        nexty = centery + nextDir[0] * cellS * (tick / framesPerMove)
+        if(i == 0){
+            nextDir = Math.floor(currAction / NUM_AGENT_ACTIONS)
+        }
+        else{
+            nextDir = currAction % NUM_AGENT_ACTIONS
+        }
+        nextx = centerx + dir[nextDir][1] * cellS * (tick / framesPerMove)
+        nexty = centery + dir[nextDir][0] * cellS * (tick / framesPerMove)
         drawLine("#fff", nextx - xSize, nexty - xSize, nextx + xSize, nexty + xSize, 3)
         drawLine("#fff", nextx - xSize, nexty + xSize, nextx + xSize, nexty - xSize, 3)
     }
@@ -517,36 +566,31 @@ function update(){
     if(tick >= framesPerMove){
         tick = 0
 
-        env.agentAction(currAction)
+        makeAgentAction(currAction)
         if(env.actionType == 1){
             env.chanceAction(actions[currActionIndex])
             currActionIndex++
         }
-        if(env.timer == TIME_LIMIT){
+        currAction = actions[currActionIndex]
+        currActionIndex++
+        if(env.timer == TIME_LIMIT || currActionIndex == actions.length){
             endState = true
             return
         }
 
         // Check if there is only one valid action
-        numValidActions = 0
-        validAction = -1
-        for(i = 0; i < 4; i++){
-            if(env.validAgentAction(i)){
-                numValidActions++
-                validAction = i
-            }
-        }
-        if(numValidActions == 0){
-            endState = true
-            return
-        }
-        if(numValidActions == 1){
-            currAction = validAction
-        }
-        else{
-            currAction = actions[currActionIndex]
-            currActionIndex++
-        }
+        // numValidActions = 0
+        // validAction = -1
+        // for(i = 0; i < 4; i++){
+        //     if(env.validAgentAction(0, i)){
+        //         numValidActions++
+        //         validAction = i
+        //     }
+        // }
+        // if(numValidActions == 0){
+        //     endState = true
+        //     return
+        // }
     }
 }
 

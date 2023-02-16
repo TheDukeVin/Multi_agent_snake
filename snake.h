@@ -18,6 +18,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <unordered_map>
+#include <stdio.h>
 
 #ifndef snake_h
 #define snake_h
@@ -49,9 +50,9 @@ using namespace std;
 // training details
 
 #define maxStates (maxTime * 2 * numPaths)
-#define maxAgentQueue 20
+#define maxAgentQueue 30
 #define evalPeriod 400
-#define numEvalGames 10
+#define numEvalGames 20
 
 #define scoreNorm 20
 
@@ -68,6 +69,10 @@ using namespace std;
 // Multithreading
 
 #define NUM_THREADS 50
+
+// Miscellaneous
+
+#define inf 1e+06
 
 const string outAddress = "snake_conv.txt";
 
@@ -418,7 +423,7 @@ public:
     void inputSymmetric(Agent& net, int t, int activeAgent);
     //void copyEnv(Environment* e);
     void print();// optional function for debugging
-    void log();// optional function for debugging
+    void log(string outFile);// optional function for debugging
     
     void computeRewards();
 
@@ -511,6 +516,7 @@ public:
     
     string gameLog;
     string valueLog;
+    string valueOutput;
     
     Trainer(){
         for(int i=0; i<maxStates; i++){
@@ -530,13 +536,17 @@ public:
     int rootIndices[maxTime*2];
     double values[maxStates];
     double policy[maxStates][numAgentActions];
+
+    double adversary_policy[maxStates][maxAgentQueue][numAgentActions];
+    bool calculated_adversary_policy[maxStates][maxAgentQueue];
     
     // Implementing the tree search
     int index;
     int rootIndex, rootState;
 
     // Sample an adversary and get an action.
-    int getAdversaryAction(Environment& env);
+    // Save the calculated policy in adversary_policy in case used again.
+    int getAdversaryAction(Environment& env, int currIndex);
     
     // For executing a training iteration:
     double actionProbs[numAgentActions];

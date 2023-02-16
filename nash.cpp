@@ -70,8 +70,14 @@ void Nash::find_equilibrium(int iter, double threshold){
         compute_step(p1, p2, sqrt(rate)*alpha);
         compute_gradients(next1, next2);
         compute_step(p1, p2, rate);
-        memcpy(p1, next1, N * sizeof(double));
-        memcpy(p2, next2, M * sizeof(double));
+        for(int j=0; j<N; j++){
+            p1[j] = next1[j];
+        }
+        for(int j=0; j<M; j++){
+            p2[j] = next2[j];
+        }
+        // memcpy(p1, next1, N * sizeof(double));
+        // memcpy(p2, next2, M * sizeof(double));
         check_policy(p1, N);
         check_policy(p2, M);
         if(i % 100 == 0){

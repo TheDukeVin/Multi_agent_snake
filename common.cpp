@@ -39,11 +39,12 @@ int sampleDist(double* dist, int N){
         if(dist[i] >= 0) sum += dist[i];
     }
     if(abs(sum - 1) > 1e-07){
-        cout<<"Bruh\n";
+        string s = "Invalid distribution\n";
         for(int i=0; i<N; i++){
-            cout<<dist[i]<<' ';
+            s += to_string(dist[i]) + ' ';
         }
-        cout<<'\n';
+        s += '\n';
+        cout<<s;
     }
     assert(abs(sum - 1) < 1e-07);
 

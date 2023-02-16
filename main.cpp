@@ -23,15 +23,15 @@ double tournament[maxAgentQueue][maxAgentQueue];
 unsigned long start_time;
 
 void standardSetup(Agent& net){
-    net.commonBranch.initEnvironmentInput(10, 10, 10, 3, 3);
-    net.commonBranch.addConvLayer(10, 10, 10, 3, 3);
-    net.commonBranch.addPoolLayer(10, 5, 5);
+    net.commonBranch.initEnvironmentInput(15, 10, 10, 3, 3);
+    net.commonBranch.addConvLayer(15, 10, 10, 3, 3);
+    net.commonBranch.addPoolLayer(15, 5, 5);
     net.setupCommonBranch();
+    net.policyBranch.addFullyConnectedLayer(300);
     net.policyBranch.addFullyConnectedLayer(200);
-    net.policyBranch.addFullyConnectedLayer(100);
     net.policyBranch.addOutputLayer(4);
+    net.valueBranch.addFullyConnectedLayer(300);
     net.valueBranch.addFullyConnectedLayer(200);
-    net.valueBranch.addFullyConnectedLayer(100);
     net.valueBranch.addOutputLayer(1);
     net.setup();
     net.randomize(0.2);
@@ -113,14 +113,14 @@ void trainCycle(){
     Agent a;
     standardSetup(a);
 
-    // a.readNet("nets/Game1500.out");
+    // a.readNet("nets/Game400.out");
 
     for(int i=0; i<NUM_THREADS; i++){
         trainers[i] = new Trainer();
         standardSetup(trainers[i]->a);
         trainers[i]->numAdversaries = 1;
         standardSetup(trainers[i]->adversaries[0]);
-        // trainers[i]->adversaries[0].readNet("nets/Game1500.out");
+        //trainers[i]->adversaries[0].readNet("nets/Game1600.out");
         trainers[i]->advProb[0] = 1;
     }
 
@@ -128,7 +128,7 @@ void trainCycle(){
     standardSetup(testing_ground.a);
     testing_ground.numAdversaries = 1;
     standardSetup(testing_ground.adversaries[0]);
-    testing_ground.advProb[0] = 0;
+    testing_ground.advProb[0] = 1;
     //cout<<"Reading net:\n";
     //t.a.readNet("snakeConv.in");
 
@@ -154,6 +154,7 @@ void trainCycle(){
     string controlLog = "control.out";
     string valueLog = "details.out";
     string scoreLog = "scores.out";
+    string gameLog = "games.out";
     ofstream hold2(summaryLog);
     hold2.close();
     ofstream hold3(valueLog);
@@ -162,11 +163,10 @@ void trainCycle(){
     hold4.close();
     ofstream hold5(controlLog);
     hold5.close();
+    ofstream hold6(gameLog);
+    hold6.close();
     
     for(int i=1; i<=numGames; ){
-        ofstream valueOut(valueLog, ios::app);
-        valueOut<<"Game "<<i<<' '<<time(NULL)<<'\n';
-        valueOut.close();
 
         for(int j=0; j<NUM_THREADS; j++){
             trainers[j]->a.copyParam(a);
@@ -179,6 +179,19 @@ void trainCycle(){
         }
 
         for(int j=0; j<NUM_THREADS; j++){
+            // Log games.
+            ofstream gameOut(gameLog, ios::app);
+            gameOut<<"Game "<<i<<":\n";
+            gameOut.close();
+            for(int t=0; t<trainers[j]->output_gameLength; t++){
+                trainers[j]->output_game[t].e.log(gameLog);
+            }
+
+            ofstream valueOut(valueLog, ios::app);
+            valueOut<<"Game "<<i<<' '<<time(NULL)<<'\n';
+            valueOut<<trainers[j]->valueOutput;
+            valueOut.close();
+
             // get cumulative rewards
             double score = trainers[j]->total_reward;
             Environment* result = &(trainers[j]->output_game[trainers[j]->output_gameLength-1].e);
@@ -203,37 +216,56 @@ void trainCycle(){
 
             // add an adversary
             if(i>0 && i%evalPeriod == 0){
+                ofstream controlOut(controlLog, ios::app);
+                controlOut << "Game "<<i<<'\n';
+
                 for(int t=0; t<tournament_size; t++){
                     testing_ground.a.copyParam(a);
                     testing_ground.adversaries[0].copyParam(trainers[0]->adversaries[t]);
                     double sum = 0;
+                    controlOut<<"Testing agent " << t << " and agent "<<tournament_size<<'\n';
+                    int symFactor = 1;
                     for(int it=0; it<numEvalGames; it++){
+                        if(it == numEvalGames / 2){
+                            // swap two agents, if environment is not symmetric.
+                            testing_ground.a.copyParam(trainers[0]->adversaries[t]);
+                            testing_ground.adversaries[0].copyParam(a);
+                            symFactor = -1;
+                        }
                         testing_ground.trainTree(TEST_MODE);
-                        sum += testing_ground.total_reward / scoreNorm;
+                        controlOut << testing_ground.total_reward * symFactor << ' ';
+                        sum += testing_ground.total_reward / scoreNorm * symFactor;
                     }
+                    controlOut << '\n';
                     tournament[t][tournament_size] = sum / numEvalGames;
                 }
                 tournament_size ++;
 
                 Nash NE(tournament_size, tournament_size);
                 for(int i_=0; i_<tournament_size; i_++){
-                    for(int j_=0; j_<tournament_size; j_++){
-                        NE[i_][j_] = tournament[i_][j_];
-                        NE[j_][i_] = -tournament[j_][i_];
+                    for(int j_=i_+1; j_<tournament_size; j_++){
+                        NE.A[i_][j_] = tournament[i_][j_];
+                        NE.A[j_][i_] = -tournament[i_][j_];
                     }
-                    NE[i_][i_] = 0;
+                    NE.A[i_][i_] = 0;
                 }
-                NE.find_equilibrium();
-                ofstream controlOut(controlLog, ios::app);
-                controlOut << "Game "<<i<<'\n';
+                NE.find_equilibrium(1e+08, 1e-05);
+
+                controlOut << "Tournament matrix: \n";
+                for(int k=0; k<tournament_size; k++){
+                    for(int l=0; l<tournament_size; l++){
+                        controlOut << NE.A[k][l] << ' ';
+                    }
+                    controlOut << '\n';
+                }
+
+                controlOut << "Equilibrium: \n";
+                for(int k=0; k<tournament_size; k++){
+                    controlOut << NE.p1[k] << ' ';
+                }
+                controlOut<<'\n';
                 controlOut << "EXPLOITABILITY: " << NE.exploitabilty() << '\n';
                 controlOut.close();
-
-                summaryOut << "Equilibrium: \n";
-                for(int k=0; k<tournament_size; k++){
-                    summaryOut << NE.p1[k] << ' ';
-                }
-                cout<<'\n';
 
                 for(int t=0; t<NUM_THREADS; t++){
                     int numAdv = trainers[t]->numAdversaries;

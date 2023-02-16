@@ -262,14 +262,15 @@ void Environment::print(){ // optional function for debugging
     */
 }
 
-void Environment::log(){ // optional function for debugging
-    cout<<"Timer: "<<timer<<'\n';
-    cout<<"Action type: "<<actionType<<'\n';
-    cout<<"Snake sizes: ";
+void Environment::log(string outFile){ // optional function for debugging
+    ofstream fout(outFile, ios::app);
+    fout<<"Timer: "<<timer<<'\n';
+    fout<<"Action type: "<<actionType<<'\n';
+    fout<<"Snake sizes: ";
     for(int i=0; i<numAgents; i++){
-        cout<<snakes[i].size<<' ';
+        fout<<snakes[i].size<<' ';
     }
-    cout<<'\n';
+    fout<<'\n';
     char output[2*boardx+1][2*boardy+1];
     for(int i=0; i<2*boardx+1; i++){
         for(int j=0; j<2*boardy+1; j++){
@@ -313,11 +314,11 @@ void Environment::log(){ // optional function for debugging
     }
     for(int i=0; i<2*boardx+1; i++){
         for(int j=0; j<2*boardy+1; j++){
-            cout<<output[i][j];
+            fout<<output[i][j];
         }
-        cout<<'\n';
+        fout<<'\n';
     }
-    cout<<'\n';
+    fout<<'\n';
 }
 
 void Environment::computeRewards(){

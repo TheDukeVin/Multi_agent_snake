@@ -102,9 +102,18 @@ void Trainer::initializeNode(Environment& env, int currNode){
     values[currNode] = a.valueOutput;
     if(env.actionType == 0){
         for(int d=0; d<numAgentActions; d++){
-            policy[currNode][d] = a.policyOutput[(symDir[symID][0]*d + symDir[symID][1] + 4) % 4];
+            if(env.validAgentAction(ACTIVE_AGENT, d)){
+                policy[currNode][d] = a.policyOutput[(symDir[symID][0]*d + symDir[symID][1] + 4) % 4];
+            }
+            else{
+                policy[currNode][d] = -1;
+            }
+            
             assert(env.isEndState() || (env.validAgentAction(ACTIVE_AGENT, d) == (policy[currNode][d] >= 0)));
         }
+    }
+    for(int i=0; i<numAdversaries; i++){
+        calculated_adversary_policy[currNode][i] = false;
     }
 }
 
@@ -124,8 +133,7 @@ void Trainer::trainTree(int mode){
     
     roots[0].initialize();
     rootIndex = 0;
-    //ofstream fout(valueLog, ios::app);
-    //fout<<(roots[0].applex * boardy + roots[0].appley)<<' ';
+    valueOutput = to_string(roots[0].apple.x * boardy + roots[0].apple.y) + ' ';
     initializeNode(roots[0], 0);
     index = 1;
     
@@ -133,7 +141,7 @@ void Trainer::trainTree(int mode){
     int chosenAction;
 
     for(rootState=0; rootState<maxTime*2; rootState++){
-        roots[rootState].log();
+        // roots[rootState].log();
         rootIndices[rootState] = rootIndex;
         if(roots[rootState].actionType == 0){
             if(mode == TRAIN_MODE){
@@ -154,7 +162,7 @@ void Trainer::trainTree(int mode){
                 search_policies[rootState][j] = actionProbs[j];
             }
             int active_action = sampleDist(actionProbs, numAgentActions);
-            int adversary_action = getAdversaryAction(roots[rootState]);
+            int adversary_action = getAdversaryAction(roots[rootState], rootIndex);
             chosenAction = active_action * numAgentActions + adversary_action;
 
             roots[rootState+1] = roots[rootState];
@@ -181,12 +189,12 @@ void Trainer::trainTree(int mode){
             index++;
         }
         rootIndex = outcomes[rootIndex][chosenAction];
-        //fout<<chosenAction<<' ';
+        valueOutput += to_string(chosenAction) + ' ';
         if(roots[rootState+1].isEndState()){
             break;
         }
     }
-    //fout<<"\n";
+    valueOutput += "\n";
 
     int numStates = rootState + 2;
     Data* game = new Data[numStates];
@@ -215,38 +223,36 @@ void Trainer::trainTree(int mode){
     output_gameLength = numStates;
     output_game = game;
 
-//    for(int i=0; i<numStates; i++){
-//        fout<<game[i].expectedValue<<' ';
-//    }
-//    fout<<"\n";
-//
-//    for(int i=0; i<numStates; i++){
-//        fout<<values[rootIndices[i]]<<' ';
-//    }
-//    fout<<"\n";
-//
-//    search_values[numStates - 1] = game[numStates - 1].e.getReward();
-//    for(int i=0; i<numStates; i++){
-//        fout<<search_values[i];
-//        if(i != numStates-1) fout<<' ';
-//    }
-//    fout<<"\n";
-//
-//    for(int i=0; i<numStates; i++){
-//        for(int j=0; j<numAgentActions; j++){
-//            fout<<policy[rootIndices[i]][j]<<' ';
-//        }
-//    }
-//    fout<<"\n";
-//
-//    for(int i=0; i<numStates; i++){
-//        for(int j=0; j<numAgentActions; j++){
-//            fout<<search_policies[i][j]<<' ';
-//        }
-//    }
-//    fout<<"\n";
-//
-//    fout.close();
+    for(int i=0; i<numStates; i++){
+        valueOutput += to_string(game[i].expectedValue) + ' ';
+    }
+    valueOutput += "\n";
+
+    for(int i=0; i<numStates; i++){
+        valueOutput += to_string(values[rootIndices[i]]) + ' ';
+    }
+    valueOutput += "\n";
+
+    search_values[numStates - 1] = game[numStates - 1].e.rewards[ACTIVE_AGENT];
+    for(int i=0; i<numStates; i++){
+        valueOutput += to_string(search_values[i]);
+        if(i != numStates-1) valueOutput += ' ';
+    }
+    valueOutput += "\n";
+
+    for(int i=0; i<numStates; i++){
+        for(int j=0; j<numAgentActions; j++){
+            valueOutput += to_string(policy[rootIndices[i]][j]) + ' ';
+        }
+    }
+    valueOutput += "\n";
+
+    for(int i=0; i<numStates; i++){
+        for(int j=0; j<numAgentActions; j++){
+            valueOutput += to_string(search_policies[i][j]) + ' ';
+        }
+    }
+    valueOutput += "\n";
 //
 //    return &roots[numStates-1];
 }
@@ -319,7 +325,7 @@ void Trainer::expandPath(){
             env.chanceAction(chosenAction);
         }
         else{
-            int adversary_action = getAdversaryAction(env);
+            int adversary_action = getAdversaryAction(env, currNode);
             chosenAction = maxIndex*numAgentActions + adversary_action;
             env.agentActions[ACTIVE_AGENT] = maxIndex;
             env.agentActions[ADVERSARY_AGENT] = adversary_action;
@@ -367,16 +373,29 @@ void Trainer::expandPath(){
     }
 }
 
-int Trainer::getAdversaryAction(Environment& env){
+int Trainer::getAdversaryAction(Environment& env, int currIndex){
     int advIndex = sampleDist(advProb, numAdversaries);
-    int symID = rand() % 8;
-    env.inputSymmetric(adversaries[advIndex], symID, ADVERSARY_AGENT);
-    adversaries[advIndex].pass(PASS_FULL);
     double policy[numAgentActions];
-    for(int d=0; d<numAgentActions; d++){
-        policy[d] = adversaries[advIndex].policyOutput[(symDir[symID][0]*d + symDir[symID][1] + 4) % 4];
-        assert(env.validAgentAction(ADVERSARY_AGENT, d) == (policy[d] >= 0));
+    if(calculated_adversary_policy[currIndex][advIndex]){
+        for(int d=0; d<numAgentActions; d++){
+            policy[d] = adversary_policy[currIndex][advIndex][d];
+        }
     }
+    else{
+        int symID = rand() % 8;
+        env.inputSymmetric(adversaries[advIndex], symID, ADVERSARY_AGENT);
+        adversaries[advIndex].pass(PASS_FULL);
+        for(int d=0; d<numAgentActions; d++){
+            policy[d] = adversaries[advIndex].policyOutput[(symDir[symID][0]*d + symDir[symID][1] + 4) % 4];
+            adversary_policy[currIndex][advIndex][d] = policy[d];
+        }
+        calculated_adversary_policy[currIndex][advIndex] = true;
+    }
+
+    for(int i=0; i<numAgentActions; i++){
+        assert(env.validAgentAction(ADVERSARY_AGENT, i) == (policy[i] >= 0));
+    }
+    
     return sampleDist(policy, numAgentActions);
 }
 
