@@ -145,3 +145,7 @@ For switching to FASRC system:
 
 change NUM_THREADS
 uncomment abs function
+
+2/23/22
+
+Changed explorationConstant to cUCB

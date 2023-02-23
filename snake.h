@@ -492,11 +492,85 @@ const int ADVERSARY_AGENT = 1;
 const int TRAIN_MODE = 0;
 const int TEST_MODE = 1;
 
+class MCTSModel{
+public:
+    double actionTemperature = 2;
+    double cUCB = 0.5;
+    
+    // Active agent has agentID 0.
+    // The adversary has agentID 1
+    Agent a;
+
+    // Train/test this agent against a competitor
+    Agent competitor;
+    
+    // Training mode:
+    int numAdversaries;
+    Agent adversaries[maxAgentQueue];
+    double advProb[maxAgentQueue];
+
+    int output_gameLength;
+    Data* output_game;
+    double total_reward; // for the active player.
+    
+    string gameLog;
+    string valueLog;
+    string valueOutput;
+    
+    Trainer(){
+        for(int i=0; i<maxStates; i++){
+            outcomes[i] = NULL;
+        }
+    }
+    
+    //Storage for the tree:
+    int* outcomes[maxStates];
+
+    double* actionSums[maxStates];
+    int* actionCounts[maxStates];
+
+    int subtreeSize[maxStates];
+    double sumScore[maxStates];
+    Environment roots[maxTime*2];
+    int rootIndices[maxTime*2];
+    double values[maxStates];
+    double policy[maxStates][numAgentActions];
+
+    double adversary_policy[maxStates][maxAgentQueue][numAgentActions];
+    bool calculated_adversary_policy[maxStates][maxAgentQueue];
+    
+    // Implementing the tree search
+    int index;
+    int rootIndex, rootState;
+
+    // Sample an adversary and get an action.
+    // Save the calculated policy in adversary_policy in case used again.
+    int getAdversaryAction(Environment& env, int currIndex);
+    
+    // For executing a training iteration:
+    double actionProbs[numAgentActions];
+    
+    void initializeNode(Environment& env, int currNode);
+    void trainTree(int mode);
+    
+    int path[maxStates];
+    int pathActions[maxStates];
+    double rewards[maxTime*2];
+    int times[maxTime*2];
+    
+    void expandPath();
+    void printTree();
+    void computeActionProbs();
+    int optActionProbs();
+    int sampleActionProbs();
+    int getRandomChanceAction(Environment* e);
+}
+
 class Trainer{
 public:
     
     double actionTemperature = 2;
-    double explorationConstant = 0.5;
+    double cUCB = 0.5;
     
     // Active agent has agentID 0.
     // The adversary has agentID 1

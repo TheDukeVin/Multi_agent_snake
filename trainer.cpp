@@ -302,7 +302,7 @@ void Trainer::expandPath(){
                     Qval = actionSums[currNode][i] / actionCounts[currNode][i];
                     size = actionCounts[currNode][i];
                 }
-                candVal = Qval + explorationConstant * policy[currNode][i] * sqrt(subtreeSize[currNode] + 1) / (size + 1);
+                candVal = Qval + cUCB * policy[currNode][i] * sqrt(subtreeSize[currNode] + 1) / (size + 1);
             }
             if(currType == 1){
                 if(numVisits == 0){

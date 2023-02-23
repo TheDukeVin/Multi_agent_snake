@@ -54,7 +54,7 @@ snakeWidth = 20
 appleSize = 20
 textSize = 20
 
-framesPerMove = 7
+framesPerMove = 10
 
 dir = [[0,1], [1,0], [0,-1], [-1,0]];
 
@@ -570,6 +570,10 @@ function update(){
         if(env.actionType == 1){
             env.chanceAction(actions[currActionIndex])
             currActionIndex++
+            if(currActionIndex == actions.length){
+                endState = true
+                return
+            }
         }
         currAction = actions[currActionIndex]
         currActionIndex++
