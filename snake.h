@@ -390,6 +390,19 @@ public:
     }
 };
 
+// Class to encode action info at a time step
+class Action{
+public:
+    int actionType;
+    int agentActions[numAgents];
+    int chanceAction;
+
+    int actionID(){
+        if(actionType == 0) return agentActions[0] + agentActions[1] * numAgentActions;
+        return chanceAction;
+    }
+};
+
 class Environment{
 public:
     int timer;
@@ -405,7 +418,6 @@ public:
     void setGridValue(Pos p, int val);
     int getGridValue(Pos p);
     
-    int agentActions[numAgents];
     double rewards[numAgents];
     
     void initialize();
@@ -415,8 +427,9 @@ public:
     bool validAgentAction(int agentID, int action); // from agentActions array
     bool validChanceAction(int pos);
 
-    void makeAction(int actionIndex);
-    void agentAction();
+    void makeAction(Action chosenAction);
+    // void setAgentAction(int agentID, int action);
+    void agentAction(int* agentActions);
     void chanceAction(int actionIndex);
 
     //void setAction(Environment* currState, int actionIndex);
@@ -461,6 +474,9 @@ public:
 
 class Data{
 public:
+    int ACTIVE_AGENT = 0;
+    int ADVERSARY_AGENT = 1;
+
     Environment e;
     double expectedValue;
     double expectedPolicy[numAgentActions];
@@ -486,38 +502,24 @@ public:
 
 // Trainer
 
-const int ACTIVE_AGENT = 0;
-const int ADVERSARY_AGENT = 1;
+const int TRAIN_ACTIVE = 0;
+const int TRAIN_ADVERSARY = 1;
 
 const int TRAIN_MODE = 0;
 const int TEST_MODE = 1;
 
 class MCTSModel{
 public:
+    int ACTIVE_AGENT;
+    int ADVERSARY_AGENT;
     double actionTemperature = 2;
     double cUCB = 0.5;
-    
-    // Active agent has agentID 0.
-    // The adversary has agentID 1
+
+    // MCTS model used to select moves for agent ACTIVE_AGENT.
+    // Same model used to predict policy/value for both agents in the tree search
     Agent a;
-
-    // Train/test this agent against a competitor
-    Agent competitor;
     
-    // Training mode:
-    int numAdversaries;
-    Agent adversaries[maxAgentQueue];
-    double advProb[maxAgentQueue];
-
-    int output_gameLength;
-    Data* output_game;
-    double total_reward; // for the active player.
-    
-    string gameLog;
-    string valueLog;
-    string valueOutput;
-    
-    Trainer(){
+    MCTSModel(){
         for(int i=0; i<maxStates; i++){
             outcomes[i] = NULL;
         }
@@ -531,58 +533,44 @@ public:
 
     int subtreeSize[maxStates];
     double sumScore[maxStates];
-    Environment roots[maxTime*2];
-    int rootIndices[maxTime*2];
     double values[maxStates];
-    double policy[maxStates][numAgentActions];
 
-    double adversary_policy[maxStates][maxAgentQueue][numAgentActions];
-    bool calculated_adversary_policy[maxStates][maxAgentQueue];
+    double policy[numAgents][maxStates][numAgentActions];
+    // double adversary_policy[maxStates][numAgentActions];
     
     // Implementing the tree search
     int index;
-    int rootIndex, rootState;
 
-    // Sample an adversary and get an action.
-    // Save the calculated policy in adversary_policy in case used again.
-    int getAdversaryAction(Environment& env, int currIndex);
+    int rootIndex;
+    Environment rootEnv;
     
     // For executing a training iteration:
     double actionProbs[numAgentActions];
     
     void initializeNode(Environment& env, int currNode);
-    void trainTree(int mode);
     
     int path[maxStates];
     int pathActions[maxStates];
     double rewards[maxTime*2];
     int times[maxTime*2];
+
+    // int getAdversaryAction(int currIndex);
+
+    void simulateAction(Environment& env, Action chosenAction);
     
     void expandPath();
     void printTree();
     void computeActionProbs();
     int optActionProbs();
-    int sampleActionProbs();
-    int getRandomChanceAction(Environment* e);
-}
+    //int sampleActionProbs();
+};
 
 class Trainer{
 public:
-    
-    double actionTemperature = 2;
-    double cUCB = 0.5;
-    
-    // Active agent has agentID 0.
-    // The adversary has agentID 1
     Agent a;
 
-    // Testing mode: test this agent against a competitor
+    // test/train this agent against a competitor
     Agent competitor;
-    
-    // Training mode:
-    int numAdversaries;
-    Agent adversaries[maxAgentQueue];
-    double advProb[maxAgentQueue];
 
     int output_gameLength;
     Data* output_game;
@@ -591,53 +579,23 @@ public:
     string gameLog;
     string valueLog;
     string valueOutput;
+
+    // In models[0], ACTIVE_AGENT = 0 and ADVERSARY_AGENT = 1
+    // In models[1], ACTIVE_AGENT = 1 and ADVERSARY_AGENT = 0
+    MCTSModel models[numAgents];
     
     Trainer(){
-        for(int i=0; i<maxStates; i++){
-            outcomes[i] = NULL;
-        }
-    }
+        models[TRAIN_ACTIVE].ACTIVE_AGENT = TRAIN_ACTIVE;
+        models[TRAIN_ACTIVE].ADVERSARY_AGENT = TRAIN_ADVERSARY;
+        models[TRAIN_ADVERSARY].ACTIVE_AGENT = TRAIN_ADVERSARY;
+        models[TRAIN_ADVERSARY].ADVERSARY_AGENT = TRAIN_ACTIVE;
+    };
     
-    //Storage for the tree:
-    int* outcomes[maxStates];
-
-    double* actionSums[maxStates];
-    int* actionCounts[maxStates];
-
-    int subtreeSize[maxStates];
-    double sumScore[maxStates];
     Environment roots[maxTime*2];
     int rootIndices[maxTime*2];
-    double values[maxStates];
-    double policy[maxStates][numAgentActions];
 
-    double adversary_policy[maxStates][maxAgentQueue][numAgentActions];
-    bool calculated_adversary_policy[maxStates][maxAgentQueue];
-    
-    // Implementing the tree search
-    int index;
-    int rootIndex, rootState;
+    void trainGame(int mode);
 
-    // Sample an adversary and get an action.
-    // Save the calculated policy in adversary_policy in case used again.
-    int getAdversaryAction(Environment& env, int currIndex);
-    
-    // For executing a training iteration:
-    double actionProbs[numAgentActions];
-    
-    void initializeNode(Environment& env, int currNode);
-    void trainTree(int mode);
-    
-    int path[maxStates];
-    int pathActions[maxStates];
-    double rewards[maxTime*2];
-    int times[maxTime*2];
-    
-    void expandPath();
-    void printTree();
-    void computeActionProbs();
-    int optActionProbs();
-    int sampleActionProbs();
     int getRandomChanceAction(Environment* e);
 };
 

@@ -67,22 +67,28 @@ bool Environment::validAgentAction(int agentID, int action){ // returns whether 
     return nbr.inBounds() && (getGridValue(nbr) == -1);
 }
 
+// void Environment::setAgentAction(int agentID, int action){
+//     assert(validAgentAction(agentID, action));
+//     agentActions[agentID] = action;
+// }
+
 bool Environment::validChanceAction(int pos){
     int newApplex = pos / boardy;
     int newAppley = pos % boardy;
     return getGridValue(Pos(newApplex, newAppley)) == -1;
 }
 
-void Environment::makeAction(int actionIndex){
-    /*
+void Environment::makeAction(Action chosenAction){
+    assert(actionType == chosenAction.actionType);
     if(actionType == 0){
-        agentAction(actionIndex);
+        agentAction(chosenAction.agentActions);
     }
     else{
-        chanceAction(actionIndex);
+        chanceAction(chosenAction.chanceAction);
     }
     
     // Unfold path
+    /*
     while(actionType == 0 && !isEndState()){
         int nextAction = -1;
         for(int i=0; i<numAgentActions; i++){
@@ -104,7 +110,7 @@ void Environment::makeAction(int actionIndex){
 //     makeAction(actionIndex);
 // }
 
-void Environment::agentAction(){
+void Environment::agentAction(int* agentActions){
     for(int i=0; i<numAgents; i++){
         assert(validAgentAction(i, agentActions[i]));
     }
@@ -128,6 +134,7 @@ void Environment::agentAction(){
 }
 
 void Environment::chanceAction(int actionIndex){
+    assert(validChanceAction(actionIndex));
     apple.x = actionIndex / boardy;
     apple.y = actionIndex % boardy;
     actionType = 0;

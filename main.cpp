@@ -19,6 +19,8 @@ Trainer testing_ground;
 // i is adversary, j is active agent - score of active agent.
 
 double tournament[maxAgentQueue][maxAgentQueue];
+double nashDist[maxAgentQueue];
+Agent opponents[maxAgentQueue];
 
 unsigned long start_time;
 
@@ -105,7 +107,7 @@ void testNet(){
 }
 
 void runThread(Trainer* t){
-    t->trainTree(TRAIN_MODE);
+    t->trainGame(TRAIN_MODE);
 }
 
 void trainCycle(){
@@ -118,24 +120,27 @@ void trainCycle(){
     for(int i=0; i<NUM_THREADS; i++){
         trainers[i] = new Trainer();
         standardSetup(trainers[i]->a);
-        trainers[i]->numAdversaries = 1;
-        standardSetup(trainers[i]->adversaries[0]);
+        standardSetup(trainers[i]->competitor);
+        for(int m=0; m<numAgents; m++){
+            standardSetup(trainers[i]->models[m].a);
+        }
         //trainers[i]->adversaries[0].readNet("nets/Game1600.out");
-        trainers[i]->advProb[0] = 1;
     }
 
     int tournament_size = 1;
+    for(int i=0; i<maxAgentQueue; i++){
+        standardSetup(opponents[i]);
+    }
+    nashDist[0] = 1;
     standardSetup(testing_ground.a);
-    testing_ground.numAdversaries = 1;
-    standardSetup(testing_ground.adversaries[0]);
-    testing_ground.advProb[0] = 1;
+    standardSetup(testing_ground.competitor);
     //cout<<"Reading net:\n";
     //t.a.readNet("snakeConv.in");
 
     const int storePeriod = 1000;
     
     dq.index = 0;
-    dq.currSize = 500;
+    dq.currSize = 2000;
     dq.momentum = 0.7;
     dq.learnRate = 0.001;
     double explorationConstant = 0.5;
@@ -170,7 +175,13 @@ void trainCycle(){
 
         for(int j=0; j<NUM_THREADS; j++){
             trainers[j]->a.copyParam(a);
-            trainers[j]->explorationConstant = explorationConstant;
+            for(int m=0; m<numAgents; m++){
+                trainers[j]->models[m].cUCB = explorationConstant;
+            }
+            // trainers[j]->explorationConstant = explorationConstant;
+            int advIndex = sampleDist(nashDist, tournament_size);
+            // cout<<"ADVERSARY: "<<advIndex<<'\n';
+            trainers[j]->competitor.copyParam(opponents[advIndex]);
             threads[j] = new thread(runThread, trainers[j]);
         }
         for(int j=0; j<NUM_THREADS; j++){
@@ -221,24 +232,25 @@ void trainCycle(){
 
                 for(int t=0; t<tournament_size; t++){
                     testing_ground.a.copyParam(a);
-                    testing_ground.adversaries[0].copyParam(trainers[0]->adversaries[t]);
+                    testing_ground.competitor.copyParam(opponents[t]);
                     double sum = 0;
                     controlOut<<"Testing agent " << t << " and agent "<<tournament_size<<'\n';
                     int symFactor = 1;
                     for(int it=0; it<numEvalGames; it++){
                         if(it == numEvalGames / 2){
                             // swap two agents, if environment is not symmetric.
-                            testing_ground.a.copyParam(trainers[0]->adversaries[t]);
-                            testing_ground.adversaries[0].copyParam(a);
+                            testing_ground.a.copyParam(opponents[t]);
+                            testing_ground.competitor.copyParam(a);
                             symFactor = -1;
                         }
-                        testing_ground.trainTree(TEST_MODE);
+                        testing_ground.trainGame(TEST_MODE);
                         controlOut << testing_ground.total_reward * symFactor << ' ';
                         sum += testing_ground.total_reward / scoreNorm * symFactor;
                     }
                     controlOut << '\n';
                     tournament[t][tournament_size] = sum / numEvalGames;
                 }
+                opponents[tournament_size].copyParam(a);
                 tournament_size ++;
 
                 Nash NE(tournament_size, tournament_size);
@@ -267,15 +279,19 @@ void trainCycle(){
                 controlOut << "EXPLOITABILITY: " << NE.exploitabilty() << '\n';
                 controlOut.close();
 
-                for(int t=0; t<NUM_THREADS; t++){
-                    int numAdv = trainers[t]->numAdversaries;
-                    standardSetup(trainers[t]->adversaries[numAdv]);
-                    trainers[t]->adversaries[numAdv].copyParam(a);
-                    trainers[t]->numAdversaries++;
-                    for(int k=0; k<trainers[t]->numAdversaries; k++){
-                        trainers[t]->advProb[k] = NE.p1[k];
-                    }
+                for(int k=0; k<tournament_size; k++){
+                    nashDist[k] = NE.p1[k];
                 }
+
+                // for(int t=0; t<NUM_THREADS; t++){
+                //     int numAdv = trainers[t]->numAdversaries;
+                //     standardSetup(trainers[t]->adversaries[numAdv]);
+                //     trainers[t]->adversaries[numAdv].copyParam(a);
+                //     trainers[t]->numAdversaries++;
+                //     for(int k=0; k<trainers[t]->numAdversaries; k++){
+                //         trainers[t]->advProb[k] = NE.p1[k];
+                //     }
+                // }
             }
             
             // if(i>0 && i%evalPeriod == 0){
@@ -316,62 +332,62 @@ void trainCycle(){
     
 }
 
-vector<Environment> nextStates(Environment e){
-    vector<Environment> states;
-    if(e.actionType == 0){
-        for(int i=0; i<numAgentActions; i++){
-            if(!e.validAgentAction(0, i)) continue;
-            for(int j=0; j<numAgentActions; j++){
-                if(!e.validAgentAction(1, j)) continue;
-                Environment newEnv = e;
-                newEnv.agentActions[0] = i;
-                newEnv.agentActions[1] = j;
-                newEnv.agentAction();
-                states.push_back(newEnv);
-            }
-        }
-    }
-    else{
-        for(int i=0; i<numChanceActions; i++){
-            if(!e.validChanceAction(i)) continue;
-            Environment newEnv = e;
-            newEnv.chanceAction(i);
-            states.push_back(newEnv);
-        }
-    }
+//vector<Environment> nextStates(Environment e){
+    // vector<Environment> states;
+    // if(e.actionType == 0){
+    //     for(int i=0; i<numAgentActions; i++){
+    //         if(!e.validAgentAction(0, i)) continue;
+    //         for(int j=0; j<numAgentActions; j++){
+    //             if(!e.validAgentAction(1, j)) continue;
+    //             Environment newEnv = e;
+    //             newEnv.agentActions[0] = i;
+    //             newEnv.agentActions[1] = j;
+    //             newEnv.agentAction();
+    //             states.push_back(newEnv);
+    //         }
+    //     }
+    // }
+    // else{
+    //     for(int i=0; i<numChanceActions; i++){
+    //         if(!e.validChanceAction(i)) continue;
+    //         Environment newEnv = e;
+    //         newEnv.chanceAction(i);
+    //         states.push_back(newEnv);
+    //     }
+    // }
     
-    return states;
-}
+    // return states;
+//}
 
-void computeEnv(){
-    Environment env;
-    env.initialize();
-    list<Environment> queue;
-    queue.push_back(env);
-    unordered_map<Environment, bool, EnvHash> states;
-    vector<Environment> allStates;
+// void computeEnv(){
+//     Environment env;
+//     env.initialize();
+//     list<Environment> queue;
+//     queue.push_back(env);
+//     unordered_map<Environment, bool, EnvHash> states;
+//     vector<Environment> allStates;
 
-    while(queue.size() != 0){
-        Environment currEnv = queue.front();
-        //currEnv.log();
-        queue.pop_front();
-        if(currEnv.isEndState()){
-            continue;
-        }
-        for(auto nextEnv : nextStates(currEnv)){
-            if(states.find(nextEnv) == states.end()){
-                states[nextEnv] = true;
-                queue.push_back(nextEnv);
-                allStates.push_back(nextEnv);
-            }
-        }
-    }
-    cout<<"Number of states: "<<states.size()<<'\n';
-/*
-    for(int i=0; i<10; i++){
-        allStates[rand() % allStates.size()].log();
-    }*/
-}
+//     while(queue.size() != 0){
+//         Environment currEnv = queue.front();
+//         //currEnv.log();
+//         queue.pop_front();
+//         if(currEnv.isEndState()){
+//             continue;
+//         }
+//         for(auto nextEnv : nextStates(currEnv)){
+//             if(states.find(nextEnv) == states.end()){
+//                 states[nextEnv] = true;
+//                 queue.push_back(nextEnv);
+//                 allStates.push_back(nextEnv);
+//             }
+//         }
+//     }
+//     cout<<"Number of states: "<<states.size()<<'\n';
+// /*
+//     for(int i=0; i<10; i++){
+//         allStates[rand() % allStates.size()].log();
+//     }*/
+// }
 
 int main()
 {

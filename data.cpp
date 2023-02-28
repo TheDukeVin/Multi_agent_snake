@@ -14,7 +14,7 @@ Data::Data(Environment* givenEnv, double givenExpected){
 
 void Data::trainAgent(Agent& a){
     int symID = rand()%8;
-    e.inputSymmetric(a, symID, ACTIVE_AGENT);
+    e.inputSymmetric(a, symID, TRAIN_ACTIVE);
     a.valueExpected = expectedValue;
     if(e.actionType == 0 && !e.isEndState()){
         double sum = 0;
