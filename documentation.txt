@@ -104,3 +104,54 @@ It seems that increasing batchSize to 1000 doesn't affect the effectiveness of t
 With Threads:
 
 g++ -std=c++11 -pthread main.cpp data.cpp convNet.cpp environment.cpp InputLayerCode.cpp trainer.cpp
+
+9/28/22
+
+To remove a directory, use
+
+rm -r -f some_folder
+
+To push a folder, use
+
+rsync -r some_folder username@host:./folder
+
+To request a cluster node, use 
+
+srun --pty -p test --mem 100 -t 0-01:00 /bin/bash
+
+10/12/22
+
+Compiling with optimizations
+
+g++ -O2 -std=c++11 -pthread main.cpp data.cpp convNet.cpp environment.cpp InputLayerCode.cpp trainer.cpp common.cpp nash.cpp MCTS.cpp
+
+10/23/22
+
+Testing initial multiagent setting
+
+g++ -O2 -std=c++11 -pthread main.cpp environment.cpp convNet.cpp InputLayerCode.cpp
+
+rsync -r multiagent_snake kevindu@login.rc.fas.harvard.edu:./MultiagentSnake
+rsync -r kevindu@login.rc.fas.harvard.edu:./MultiagentSnake/multiagent_snake .
+
+2/5/23
+
+srun --pty -p bigmem --mem 200000 -t 2-00:00 /bin/bash
+
+Adversarial without storing policy: 7.95 per game out of 800
+Adversarial with storing policy: 
+
+For switching to FASRC system:
+
+change NUM_THREADS
+uncomment abs function
+change evalPeriod
+
+2/23/23
+
+Changed explorationConstant to cUCB
+
+2/28/23
+
+3/7/23 Submitted job 44890129
+3/8/23 Submitted job 44932277

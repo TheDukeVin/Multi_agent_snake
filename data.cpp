@@ -8,18 +8,23 @@
 #include "snake.h"
 
 Data::Data(Environment* givenEnv, double givenExpected){
-    e.copyEnv(givenEnv);
+    e = *givenEnv;
     expectedValue = givenExpected;
 }
 
 void Data::trainAgent(Agent& a){
     int symID = rand()%8;
-    e.inputSymmetric(a, symID);
+    e.inputSymmetric(a, symID, TRAIN_ACTIVE);
     a.valueExpected = expectedValue;
     if(e.actionType == 0 && !e.isEndState()){
+        double sum = 0;
         for(int i=0; i<numAgentActions; i++){
             a.policyExpected[(symDir[symID][0]*i + symDir[symID][1] + 4) % 4] = expectedPolicy[i];
+            if(expectedPolicy[i] >= 0){
+                sum += expectedPolicy[i];
+            }
         }
+        assert(abs(sum - 1) < 1e-07);
         a.backProp(PASS_FULL);
     }
     else{
@@ -30,25 +35,31 @@ void Data::trainAgent(Agent& a){
 
 DataQueue::DataQueue(){
     index = 0;
+    numFilled = 0;
     for(int i=0; i<queueSize; i++){
         queue[i] = NULL;
     }
 }
 
 void DataQueue::enqueue(Data* d, int gameLength){
-    if(queue[index%queueSize] != NULL){
-        delete queue[index%queueSize];
+    assert(index < currSize);
+    if(queue[index] != NULL){
+        delete queue[index];
     }
-    queue[index%queueSize] = d;
-    gameLengths[index % queueSize] = gameLength;
+    queue[index] = d;
+    gameLengths[index] = gameLength;
+    numFilled = max(index + 1, numFilled);
     index++;
+    if(index == currSize){
+        index = 0;
+    }
 }
 
 void DataQueue::trainAgent(Agent& a){
     int i,j;
     for(i=0; i<numBatches; i++){
         for(j=0; j<batchSize; j++){
-            int gameIndex = rand() % min(index,queueSize);
+            int gameIndex = rand() % numFilled;
             queue[gameIndex][rand() % gameLengths[gameIndex]].trainAgent(a);
         }
         a.updateParameters(learnRate / batchSize, momentum);
@@ -56,6 +67,8 @@ void DataQueue::trainAgent(Agent& a){
 }
 
 vector<int> DataQueue::readGames(){
+    return vector<int>();
+    /*
     ifstream fin("games.in");
     vector<int> scores;
     while(true){
@@ -124,13 +137,6 @@ vector<int> DataQueue::readGames(){
                 assert(abs(sum - 1) < 0.01);
             }
             assert((game[i].e.isEndState() || game[i].e.actionType == 1) == (sum == 0));
-            /*
-            if(game[i].e.isEndState() != (sum == 0)){
-                cout<<'\n'<<i<<'\n';
-                game[i].e.log();
-                cout<<"End state: " << game[i].e.isEndState();
-                assert(false);
-            }*/
             for(int j=0; j<numAgentActions; j++){
                 if(policy[j] < 0){
                     game[i].expectedPolicy[j] = -1;
@@ -146,4 +152,5 @@ vector<int> DataQueue::readGames(){
     }
     cout<<"\n\n";
     return scores;
+    */
 }

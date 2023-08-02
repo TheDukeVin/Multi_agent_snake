@@ -14,50 +14,67 @@
 #include <string>
 #include <vector>
 #include <list>
+#include <cassert>
+#include <mutex>
+#include <condition_variable>
+#include <unordered_map>
+#include <stdio.h>
 
 #ifndef snake_h
 #define snake_h
 
 using namespace std;
 
-//environment details
+// environment details
+
+#define numAgents 2
 
 #define boardx 10
 #define boardy 10
-#define maxTime 1200
+#define maxTime 1000
 
 #define numAgentActions 4
-#define numChanceActions (boardx*boardy)
-#define maxNumActions (boardx*boardy)
+#define numChanceActions (boardx * boardy)
+#define maxNumActions (boardx * boardy)
 
-//training deatils
+#define discountFactor 0.98
+
+#define LosePenalty 5
+
+// network deatils
 
 #define maxNorm 100
 #define batchSize 100
 #define numBatches 30
 
-//#define scoreNorm 10
-#define queueSize 2000
+#define queueSize 10000
 
-#define numGames 4000
-#define numPaths 200
-#define explorationConstant 0.5
+// training details
 
-#define maxStates (maxTime*2*numPaths)
-#define evalPeriod 100
+#define maxStates (maxTime * 2 * numPaths)
+#define maxAgentQueue 15
+#define evalPeriod 1000
 #define numEvalGames 100
-#define evalZscore 2
 
-#define discountFactor 0.98
+#define scoreNorm LosePenalty
 
-// Passing Value or Full
+#define numGames ((maxAgentQueue - 1) * evalPeriod)
+#define numPaths 200
+
+
+// Passing Value or Full (or Policy)
 
 #define PASS_VALUE 0
 #define PASS_FULL 1
+#define PASS_POLICY 2
 
 // Multithreading
 
-#define NUM_THREADS 50
+#define NUM_THREADS 48
+
+// Miscellaneous
+
+#define inf 1e+06
 
 const string outAddress = "snake_conv.txt";
 
@@ -67,6 +84,12 @@ int max(int x, int y);
 
 double min(double x, double y);
 
+double abs(double x);
+
+// take a random sample from a distribution on 0,...,N-1
+// -1 represents an invalid value.
+int sampleDist(double* dist, int N);
+
 // For the network
 double randWeight(double startingParameterRange);
 
@@ -75,12 +98,52 @@ double nonlinear(double x);
 // If f = nonlinear, then this function is (f' \circ f^{-1}).
 double dinvnonlinear(double x);
 
+
+class Nash{
+public:
+    int N, M;
+    double** A;
+
+    const double rate = 1e-01;
+    const double alpha = 1;
+
+    double* p1;
+    double* p2;
+
+    double* grad1;
+    double* grad2;
+
+    double* next1;
+    double* next2;
+
+    Nash(){}
+
+    Nash(int N_, int M_){
+        initialize(N_, M_);
+    }
+    void find_equilibrium(int iter, double threshold);
+    double exploitabilty();
+    void evaluate(int size, int iter, int num_trial);
+
+private:
+    void initialize(int N_, int M_);
+    void compute_gradients(double* p1, double* p2);
+    void compute_step(double* p1, double* p2, double step_size);
+    void exp_step(double* policy, double* grad, double* next_policy, double step_size, int size);
+    void check_policy(double* policy, int size);
+};
+
+
 // Input to the network
 
+
 struct networkInput{
+    // 0, 1, 2, 3 = snake units pointing to next unit.
+    // 4 = head of snake
+    // 5 = tail of snake
+    // +6k = agent k
+    // 6*numAgents = the apple.
     int snake[boardx][boardy];
-    int pos[3][2]; // head, tail, and apple positions
-    //double param[3]; // timer, score, and actionType. score and timer are normalized.
 };
 
 const int symDir[8][2] = {
@@ -131,11 +194,6 @@ public:
     int convHeight, convWidth;
     int shiftr, shiftc;
     int w1, w2, w3;
-    /*
-    double weights[maxDepth][maxDepth][maxConvSize][maxConvSize]; // accessed in inputl, outputl, r, c.
-    double bias[maxDepth];
-    double Dweights[maxDepth][maxDepth][maxConvSize][maxConvSize];
-    double Dbias[maxDepth];*/
     
     ConvLayer(int inD, int inH, int inW, int outD, int outH, int outW, int convH, int convW);
     
@@ -192,14 +250,6 @@ public:
     int w1, w2, w3;
     
     networkInput* env;
-    
-    double* snakeWeights; // accessed in cellType, outputl, r, c.
-    double* posWeights;
-    //double* paramWeights;
-    
-    double* DsnakeWeights;
-    double* DposWeights;
-    //double* DparamWeights;
     
     InputLayer(int outD, int outH, int outW, int convH, int convW, networkInput* input);
     
@@ -291,58 +341,144 @@ public:
     void readNet(string fileName);
 };
 
+
 // Environment things
 
 const int numActions[2] = {numAgentActions, numChanceActions};
 
 const int dir[4][2] = {{0,1}, {1,0}, {0,-1}, {-1,0}};
 
+class Pos{
+public:
+    int x, y;
+
+    Pos(){
+        x = y = -1;
+    }
+
+    Pos(int _x, int _y){
+        x = _x; y = _y;
+    }
+
+    bool inBounds(){
+        return 0 <= x && x < boardx && 0 <= y && y < boardy;
+    }
+
+    Pos shift(int d){
+        return Pos(x + dir[d][0], y + dir[d][1]);
+    }
+
+    friend bool operator == (const Pos& p, const Pos& q){
+        return (p.x == q.x) && (p.y == q.y);
+    }
+
+    friend bool operator != (const Pos& p, const Pos& q){
+        return (p.x != q.x) || (p.y != q.y);
+    }
+};
+
+class Snake{
+public:
+    int size;
+    Pos head;
+    Pos tail;
+
+    Snake(){
+        size = -1;
+    }
+
+    friend bool operator != (const Snake& r, const Snake& s){
+        return (r.size != s.size) || (r.head != s.head) || (r.tail != s.tail);
+    }
+};
+
+// Class to encode action info at a time step
+class Action{
+public:
+    int actionType;
+    int agentActions[numAgents];
+    int chanceAction;
+
+    int actionID(){
+        if(actionType == 0) return agentActions[0] + agentActions[1] * numAgentActions;
+        return chanceAction;
+    }
+};
+
 class Environment{
-private:
-    double score;
 public:
     int timer;
     int actionType; // 0 = action state, 1 = reaction state.
+
+    Snake snakes[numAgents];
+    Pos apple;
+
+     // -1 = not snake. 0 to 3 = snake unit pointing to next unit. 4 = head.
+     // +5k for agent k
+    int grid[boardx][boardy];
+
+    void setGridValue(Pos p, int val);
+    int getGridValue(Pos p);
     
-    int snakeSize;
-    int headx,heady;
-    int tailx, taily;
-    int applex,appley;
-    int snake[boardx][boardy]; // -1 = not snake. 0 to 3 = snake unit pointing to next unit. 4 = head.
+    double rewards[numAgents];
     
     void initialize();
     
     bool isEndState();
-    bool validAction(int actionIndex); // returns whether the action is valid.
-    bool validAgentAction(int d);
+
+    bool validAgentAction(int agentID, int action); // from agentActions array
     bool validChanceAction(int pos);
-    void makeAction(int actionIndex);
-    void setAction(Environment* currState, int actionIndex);
-    void inputSymmetric(Agent& net, int t);
-    void copyEnv(Environment* e);
-    void print();// optional function for debugging
-    void log();// optional function for debugging
-    
-    double getReward();
-    
-    void agentAction(int actionIndex);
+
+    void makeAction(Action chosenAction);
+    // void setAgentAction(int agentID, int action);
+    void agentAction(int* agentActions);
     void chanceAction(int actionIndex);
 
+    //void setAction(Environment* currState, int actionIndex);
+    void inputSymmetric(Agent& net, int t, int activeAgent);
+    //void copyEnv(Environment* e);
+    void print();// optional function for debugging
+    void log(string outFile);// optional function for debugging
+    
+    void computeRewards();
+
+    friend bool operator == (const Environment& e1, const Environment& e2);
+
+    /*
     double features(int featureType);
     double features2(Environment* nextState, int featureType);
     double distance(int featureType);
 
     void BFS(int* dist, int sourcex, int sourcey, bool fill = true);
     int lastAction();
-    
-private:
-    double getScore();
+    */
+};
+
+class EnvHash{
+public:
+    size_t operator()(const Environment& env) const {
+        int M = 10000019;
+        int val = 0;
+        //val = (val * 3 + env.timer) % M;
+        val = (val * 3 + env.actionType) % M;
+        val = (val * 3 + env.apple.x) % M;
+        val = (val * 3 + env.apple.y) % M;
+        for(int i=0; i<boardx; i++){
+            for(int j=0; j<boardy; j++){
+                val = (val * 3 + env.grid[i][j]) % M;
+            }
+        }
+        return val;
+    }
 };
 
 // Data things
 
 class Data{
 public:
+    int ACTIVE_AGENT = 0;
+    int ADVERSARY_AGENT = 1;
+
     Environment e;
     double expectedValue;
     double expectedPolicy[numAgentActions];
@@ -357,6 +493,7 @@ public:
     Data* queue[queueSize];
     int gameLengths[queueSize];
     int index;
+    int currSize, numFilled;
     double learnRate, momentum;
     
     DataQueue();
@@ -365,29 +502,26 @@ public:
     vector<int> readGames(); // returns the maximum score out of the games read.
 };
 
-class ThreadOutput{
-public:
-    int gameLength[NUM_THREADS];
-    Data* games[NUM_THREADS];
-};
-
 // Trainer
 
-class Trainer{
+const int TRAIN_ACTIVE = 0;
+const int TRAIN_ADVERSARY = 1;
+
+const int TRAIN_MODE = 0;
+const int TEST_MODE = 1;
+
+class MCTSModel{
 public:
-    DataQueue* dq;
-    
-    double actionTemperature = 1;
-    
+    int ACTIVE_AGENT;
+    int ADVERSARY_AGENT;
+    double actionTemperature;
+    double cUCB;
+
+    // MCTS model used to select moves for agent ACTIVE_AGENT.
+    // Same model used to predict policy/value for both agents in the tree search
     Agent a;
-    ThreadOutput* tout;
     
-    string gameLog;
-    string valueLog;
-    
-    Trainer(DataQueue* givendq, ThreadOutput* givenTout){
-        dq = givendq;
-        tout = givenTout;
+    MCTSModel(){
         for(int i=0; i<maxStates; i++){
             outcomes[i] = NULL;
         }
@@ -395,32 +529,73 @@ public:
     
     //Storage for the tree:
     int* outcomes[maxStates];
+
+    double* actionSums[maxStates];
+    int* actionCounts[maxStates];
+
     int subtreeSize[maxStates];
     double sumScore[maxStates];
-    Environment roots[maxTime*2];
-    int rootIndices[maxTime*2];
     double values[maxStates];
-    double policy[maxStates][numAgentActions];
+
+    double policy[numAgents][maxStates][numAgentActions];
+    // double adversary_policy[maxStates][numAgentActions];
     
     // Implementing the tree search
     int index;
-    int rootIndex, rootState;
+
+    int rootIndex;
+    Environment rootEnv;
     
     // For executing a training iteration:
     double actionProbs[numAgentActions];
     
     void initializeNode(Environment& env, int currNode);
-    void trainTree(int threadID); // adds game to thread storage.
     
     int path[maxStates];
+    int pathActions[maxStates];
     double rewards[maxTime*2];
     int times[maxTime*2];
+
+    // int getAdversaryAction(int currIndex);
+
+    void simulateAction(Environment& env, Action chosenAction);
     
     void expandPath();
     void printTree();
     void computeActionProbs();
     int optActionProbs();
-    int sampleActionProbs();
+    //int sampleActionProbs();
+};
+
+class Trainer{
+public:
+    Agent a;
+
+    // test/train this agent against a competitor
+    Agent competitor;
+
+    int output_gameLength;
+    Data* output_game;
+    double total_reward; // for the active player.
+
+    double actionTemperature = 2;
+    double cUCB = 0.5;
+    
+    string gameLog;
+    string valueLog;
+    string valueOutput;
+
+    // In models[0], ACTIVE_AGENT = 0 and ADVERSARY_AGENT = 1
+    // In models[1], ACTIVE_AGENT = 1 and ADVERSARY_AGENT = 0
+    MCTSModel models[numAgents];
+    
+    Environment roots[maxTime*2];
+    int rootIndices[maxTime*2];
+
+    void passParams();
+
+    void trainGame(int mode);
+
     int getRandomChanceAction(Environment* e);
 };
 
