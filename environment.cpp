@@ -81,9 +81,13 @@ bool Environment::validChanceAction(int pos){
 void Environment::makeAction(Action chosenAction){
     assert(actionType == chosenAction.actionType);
     if(actionType == 0){
+        for(int i=0; i<numAgents; i++){
+            assert(validAgentAction(i, chosenAction.agentActions[i]));
+        }
         agentAction(chosenAction.agentActions);
     }
     else{
+        assert(validChanceAction(chosenAction.chanceAction));
         chanceAction(chosenAction.chanceAction);
     }
     

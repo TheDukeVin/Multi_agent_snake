@@ -66,8 +66,56 @@ void DataQueue::trainAgent(Agent& a){
     }
 }
 
-vector<int> DataQueue::readGames(){
-    return vector<int>();
+vector<int> DataQueue::readGames(string fileName){
+    ifstream fin (fileName);
+    vector<int> scores;
+    string s;
+    bool nextLine = false;
+    while(getline(fin, s)){
+        if (s[0] == 'G'){
+            nextLine = true;
+            continue;
+        }
+        if(!nextLine) continue;
+        stringstream sin (s);
+        int input;
+        sin >> input;
+
+        vector<Environment> envs;
+        Environment initialEnv;
+        initialEnv.initialize();
+        initialEnv.chanceAction(input);
+        envs.push_back(initialEnv);
+        
+        for(int i=1; true; i++){
+            sin>>input;
+            Environment new_env = envs[i-1];
+            Action chosenAction(envs[i-1].actionType, input);
+            new_env.makeAction(chosenAction);
+            
+            envs.push_back(new_env);
+            if(new_env.isEndState()){
+                break;
+            }
+        }
+        int gameLength = envs.size();
+        
+        Data* game = new Data[gameLength];
+        
+        // double value = envs[gameLength-1].getReward();
+        for(int i=gameLength-1; i>=0; i--){
+            // game[i].expectedValue = value;
+            game[i].e = envs[i];
+            // if(i > 0){
+            //     value = envs[i-1].getReward() + value * pow(discountFactor, envs[i].timer - envs[i-1].timer);
+            // }
+        }
+        enqueue(game, gameLength);
+        scores.push_back(0);
+
+        nextLine = false;
+    }
+    return scores;
     /*
     ifstream fin("games.in");
     vector<int> scores;

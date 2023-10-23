@@ -1,0 +1,296 @@
+
+double initParam = 0.1;
+double learnRate = 0.02;
+double momentum = 0.7;
+int batchSize = 10;
+double meanUpdate = 0.0001;
+
+0: 0.823
+0: 1.478
+0: 1.337
+0: 0.483
+0: 0.772
+0: 7.901
+0: 1.573
+0: 0.808
+0: 3.697
+0: 1.474
+0: TIME: 12608
+
+
+double initParam = 0.1;
+double learnRate = 0.02/0.01/0.005/0.002;
+double momentum = 0.7;
+int batchSize = 10;
+double meanUpdate = 0.0001;
+
+0: 4.103
+0: 2.743
+0: 4.508
+0: 5.504
+0: 0.423
+    0: 2.619
+    0: 1.074
+    0: 2.343
+    0: 2.513
+    0: 2.145
+0: 0.817
+0: 0.955
+0: 0.87
+0: 0.919
+0: 0.815
+0: 0.676
+0: 0.657
+0: 0.705
+0: 0.651
+0: 0.615
+0: TIME: 13872
+
+double initParam = 0.1;
+double learnRate = 0.05/0.02/0.01/0.005;
+double momentum = 0.3;
+int batchSize = 10;
+double meanUpdate = 0.0001;
+
+0: 0.755
+0: 0.533
+0: 0.478
+0: 4.59
+0: 0.041
+0: 2.063
+0: 2.219
+0: 0.263
+0: 2.069
+0: 1.903
+0: 0.743
+0: 0.73
+0: 0.767
+0: 0.798
+0: 0.79
+0: 0.727
+0: 0.671
+0: 0.649
+0: 0.647
+0: 0.641
+0: TIME: 12897
+
+
+
+Fast Time:
+
+0: 0.927
+0: TIME: 1661
+
+double initParam = 0.1;
+double learnRate = 0.01;
+double momentum = 0.7;
+int batchSize = 20;
+double meanUpdate = 0.001;
+
+0: 3.191
+0: TIME: 2201
+
+Train for 200,000 iterations
+
+Beginning training
+Learn rate: 0.01
+Iter: 1000. Average Reward: 0.61135
+Iter: 2000. Average Reward: 0.64955
+Iter: 3000. Average Reward: 0.67175
+Iter: 4000. Average Reward: 0.7049
+Iter: 5000. Average Reward: 0.7724
+Iter: 6000. Average Reward: 1.02445
+Iter: 7000. Average Reward: 1.53875
+Iter: 8000. Average Reward: 2.10835
+Iter: 9000. Average Reward: 2.8349
+Iter: 10000. Average Reward: 3.58795
+Iter: 11000. Average Reward: 4.497
+Iter: 12000. Average Reward: 6.0842
+Iter: 13000. Average Reward: 9.24425
+Iter: 14000. Average Reward: 13.7461
+Iter: 15000. Average Reward: 15.9515
+Iter: 16000. Average Reward: 16.7638
+Iter: 17000. Average Reward: 17.2355
+Iter: 18000. Average Reward: 17.5663
+Iter: 19000. Average Reward: 17.7687
+Iter: 20000. Average Reward: 6.44745
+Iter: 21000. Average Reward: 0.02935
+Iter: 22000. Average Reward: 0.02805
+Iter: 23000. Average Reward: 0.0279
+Iter: 24000. Average Reward: 0.0286
+Iter: 25000. Average Reward: 0.0274
+Iter: 26000. Average Reward: 0.0299
+Iter: 27000. Average Reward: 0.02755
+Iter: 28000. Average Reward: 0.0277
+Iter: 29000. Average Reward: 0.02765
+Iter: 30000. Average Reward: 0.0279
+Iter: 31000. Average Reward: 0.0273
+Iter: 32000. Average Reward: 0.0266
+Iter: 33000. Average Reward: 0.02865
+Iter: 34000. Average Reward: 0.03065
+Iter: 35000. Average Reward: 0.05655
+Iter: 36000. Average Reward: 0.10635
+Iter: 37000. Average Reward: 0.1685
+Iter: 38000. Average Reward: 0.26985
+Iter: 39000. Average Reward: 0.40515
+Iter: 40000. Average Reward: 0.55175
+Iter: 41000. Average Reward: 0.72685
+Iter: 42000. Average Reward: 1.02685
+Iter: 43000. Average Reward: 1.5039
+Iter: 44000. Average Reward: 5.44465
+Iter: 45000. Average Reward: 14.5994
+Iter: 46000. Average Reward: 15.3879
+Iter: 47000. Average Reward: 0.04185
+Iter: 48000. Average Reward: 0.04035
+Iter: 49000. Average Reward: 0.0429
+Iter: 50000. Average Reward: 0.0455
+Iter: 51000. Average Reward: 0.0598
+Iter: 52000. Average Reward: 0.08855
+Iter: 53000. Average Reward: 0.12175
+Iter: 54000. Average Reward: 0.1417
+Iter: 55000. Average Reward: 0.14035
+Iter: 56000. Average Reward: 0.13555
+Iter: 57000. Average Reward: 0.14035
+Iter: 58000. Average Reward: 0.148
+Iter: 59000. Average Reward: 0.15985
+Iter: 60000. Average Reward: 0.15675
+Iter: 61000. Average Reward: 0.15685
+Iter: 62000. Average Reward: 0.20545
+Iter: 63000. Average Reward: 0.3788
+Iter: 64000. Average Reward: 0.4871
+Iter: 65000. Average Reward: 0.60535
+Iter: 66000. Average Reward: 0.6894
+Iter: 67000. Average Reward: 0.74765
+Iter: 68000. Average Reward: 0.79975
+Iter: 69000. Average Reward: 0.855
+Iter: 70000. Average Reward: 0.90565
+Iter: 71000. Average Reward: 0.9854
+Iter: 72000. Average Reward: 1.01495
+Iter: 73000. Average Reward: 1.03585
+Iter: 74000. Average Reward: 1.12405
+Iter: 75000. Average Reward: 1.1249
+Iter: 76000. Average Reward: 1.1307
+Iter: 77000. Average Reward: 1.2782
+Iter: 78000. Average Reward: 1.39735
+Iter: 79000. Average Reward: 1.36475
+Iter: 80000. Average Reward: 1.52235
+Iter: 81000. Average Reward: 1.6915
+Iter: 82000. Average Reward: 1.8783
+Iter: 83000. Average Reward: 2.00165
+Iter: 84000. Average Reward: 2.17045
+Iter: 85000. Average Reward: 2.3995
+Iter: 86000. Average Reward: 2.7125
+Iter: 87000. Average Reward: 3.06675
+Iter: 88000. Average Reward: 3.30255
+Iter: 89000. Average Reward: 2.39675
+Iter: 90000. Average Reward: 1.8921
+Iter: 91000. Average Reward: 0.6369
+Iter: 92000. Average Reward: 0.9426
+Iter: 93000. Average Reward: 1.14715
+Iter: 94000. Average Reward: 1.32455
+Iter: 95000. Average Reward: 1.5071
+Iter: 96000. Average Reward: 1.7296
+Iter: 97000. Average Reward: 2.00105
+Iter: 98000. Average Reward: 2.34235
+Iter: 99000. Average Reward: 2.96685
+Iter: 100000. Average Reward: 3.4415
+Iter: 101000. Average Reward: 6.00155
+Iter: 102000. Average Reward: 8.7462
+Iter: 103000. Average Reward: 11.5942
+Iter: 104000. Average Reward: 13.3635
+Iter: 105000. Average Reward: 16.002
+Iter: 106000. Average Reward: 17.229
+Iter: 107000. Average Reward: 17.6914
+Iter: 108000. Average Reward: 17.9615
+Iter: 109000. Average Reward: 18.1445
+Iter: 110000. Average Reward: 18.3196
+Iter: 111000. Average Reward: 18.4544
+Iter: 112000. Average Reward: 18.5525
+Iter: 113000. Average Reward: 18.6382
+Iter: 114000. Average Reward: 18.7088
+Iter: 115000. Average Reward: 18.7955
+Iter: 116000. Average Reward: 18.8643
+Iter: 117000. Average Reward: 18.9746
+Iter: 118000. Average Reward: 19.0056
+Iter: 119000. Average Reward: 19.0939
+Iter: 120000. Average Reward: 19.0984
+Iter: 121000. Average Reward: 19.1711
+Iter: 122000. Average Reward: 19.2251
+Iter: 123000. Average Reward: 19.2846
+Iter: 124000. Average Reward: 19.295
+Iter: 125000. Average Reward: 19.3368
+Iter: 126000. Average Reward: 19.3584
+Iter: 127000. Average Reward: 19.3636
+Iter: 128000. Average Reward: 19.4194
+Iter: 129000. Average Reward: 19.4673
+Iter: 130000. Average Reward: 19.4916
+Iter: 131000. Average Reward: 19.5171
+Iter: 132000. Average Reward: 19.5437
+Iter: 133000. Average Reward: 19.5643
+Iter: 134000. Average Reward: 19.5823
+Iter: 135000. Average Reward: 19.6229
+Iter: 136000. Average Reward: 19.6479
+Iter: 137000. Average Reward: 19.6574
+Iter: 138000. Average Reward: 19.668
+Iter: 139000. Average Reward: 19.7449
+Iter: 140000. Average Reward: 19.7431
+Iter: 141000. Average Reward: 19.7787
+
+double initParam = 0.1;
+double learnRate = 0.01 -> 0.002;
+double momentum = 0.7;
+int batchSize = 20;
+double meanUpdate = 0.001;
+
+0: 19.2035
+0: TIME: 25065
+
+double initParam = 0.1;
+double learnRate = 0.01;
+double momentum = 0.7;
+int batchSize = 20;
+double regRate = 0.0001;
+double meanUpdate = 0.001;
+
+trains too slowly
+approx 16.63
+
+double initParam = 0.1;
+double learnRate = 0.02;
+double momentum = 0.7;
+int batchSize = 20;
+double regRate = 0.0001;
+double meanUpdate = 0.001;
+
+breaks
+
+double initParam = 0.1;
+double learnRate = 0.01;
+double momentum = 0.7;
+int batchSize = 20;
+double regRate = 0.00001;
+double meanUpdate = 0.001;
+
+0: 20.3666
+0: TIME: 22430
+
+
+Convolutional Networks:
+
+double initParam = 0.1;
+double learnRate = 0.01;
+double momentum = 0.7;
+int batchSize = 20;
+int numSubThreads = 20;
+double regRate = 0.00001;
+double meanUpdate = 0.001;
+
+PG(){
+    Model m(Shape(2*numRabbits, boardSize, boardSize));
+    m.addConv(Shape(6, 5, 5), 3, 3);
+    m.addLSTM(100);
+    m.addOutput(NUM_ACTIONS);
+    seq = ModelSeq(m, TIME_HORIZON, initParam);
+}
+
+Reward: 18.5942

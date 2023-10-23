@@ -400,21 +400,100 @@ void trainCycle(){
 //     }*/
 // }
 
+int numActivations = 100;
+
+void get_embedding(){
+    dq.currSize = 10000;
+    dq.readGames("details.out");
+    vector<Environment> states;
+    for(int i=0; i<dq.currSize; i++){
+        for(int j=0; j<dq.gameLengths[i]; j++){
+            states.push_back(dq.queue[i][j].e);
+        }
+    }
+    cout<<states.size()<<'\n';
+    Agent net;
+    standardSetup(net);
+    net.readNet("nets/Game10000.out");
+    ofstream fout ("embed.out");
+    Branch policy_branch = net.policyBranch;
+    Layer* lastLayer = policy_branch.layers[policy_branch.numLayers-1];
+    for(auto s : states){
+        s.inputSymmetric(net, 0, 0);
+        net.pass(PASS_FULL);
+        for(int i=0; i<numActivations; i++){
+            fout<<lastLayer->inputs[i]<<' ';
+        }
+        fout<<'\n';
+    }
+}
+
+void cluster(){
+    dq.currSize = 10000;
+    dq.readGames("details.out");
+    vector<Environment> states;
+    for(int i=0; i<dq.currSize; i++){
+        for(int j=0; j<dq.gameLengths[i]; j++){
+            states.push_back(dq.queue[i][j].e);
+        }
+    }
+    int N = states.size();
+    cout<<N<<'\n';
+    ifstream fin ("embed.in");
+    double data[N*numActivations];
+    for(int i=0; i<N; i++){
+        for(int j=0; j<numActivations; j++){
+            fin >> data[i*numActivations + j];
+        }
+    }
+    cout<<"Read data\n";
+    Kmeans km(data, numActivations, N);
+    km.cluster(100, 100, 0.001);
+}
+
+void testKmeans(){
+    double data[8] = {
+        1, 1,
+        2, 2,
+        1, 6,
+        3, 6
+    };
+    Kmeans km(data, 2, 4);
+    km.cluster(2, 10, 0.001);
+    for(int i=0; i<2; i++){
+        for(int j=0; j<2; j++){
+            cout<<km.centers[i][j]<<' ';
+        }
+        cout<<'\n';
+    }
+}
+
 int main()
 {
     srand((unsigned)time(NULL));
     start_time = time(NULL);
+
+    
     
     /*
     for(int i=0; i<1; i++){
         testNet();
     }*/
     
-    trainCycle();
+    // trainCycle();
     
     //evaluate();
 
     //computeEnv();
+
+    // get_embedding();
+
+    // testKmeans();
+
+    // cluster();
+
+    size_t end_time = time(NULL);
+    cout<< "TIME: "<<(end_time - start_time);
     
     return 0;
     

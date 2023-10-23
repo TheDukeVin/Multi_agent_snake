@@ -5,6 +5,8 @@
 //  Created by Kevin Du on 1/18/22.
 //
 
+// #include "LSTM/lstm.h"
+
 #include <iostream>
 #include <fstream>
 #include <thread>
@@ -19,6 +21,7 @@
 #include <condition_variable>
 #include <unordered_map>
 #include <stdio.h>
+#include <sstream>
 
 #ifndef snake_h
 #define snake_h
@@ -84,7 +87,7 @@ int max(int x, int y);
 
 double min(double x, double y);
 
-double abs(double x);
+// double abs(double x);
 
 // take a random sample from a distribution on 0,...,N-1
 // -1 represents an invalid value.
@@ -98,6 +101,22 @@ double nonlinear(double x);
 // If f = nonlinear, then this function is (f' \circ f^{-1}).
 double dinvnonlinear(double x);
 
+using namespace std;
+
+class Kmeans{
+public:
+    double** data;
+    int dimension, size;
+
+    double** centers;
+    int numClusters;
+
+    Kmeans(double* data_, int dim, int s);
+
+    void cluster(int numClusters_, int maxIter, double tolerance);
+
+    bool update(double tolerance);
+};
 
 class Nash{
 public:
@@ -399,6 +418,19 @@ public:
     int agentActions[numAgents];
     int chanceAction;
 
+    Action(){}
+
+    Action(int type, int ID){
+        actionType = type;
+        if(actionType == 0){
+            agentActions[0] = ID % numAgentActions;
+            agentActions[1] = ID / numAgentActions;
+        }
+        else{
+            chanceAction = ID;
+        }
+    }
+
     int actionID(){
         if(actionType == 0) return agentActions[0] + agentActions[1] * numAgentActions;
         return chanceAction;
@@ -499,7 +531,7 @@ public:
     DataQueue();
     void enqueue(Data* d, int gameLength);
     void trainAgent(Agent& a);
-    vector<int> readGames(); // returns the maximum score out of the games read.
+    vector<int> readGames(string fileName);
 };
 
 // Trainer

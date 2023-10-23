@@ -155,3 +155,7 @@ Changed explorationConstant to cUCB
 
 3/7/23 Submitted job 44890129
 3/8/23 Submitted job 44932277
+
+8/2/23
+
+g++ -O2 -std=c++11 -pthread main.cpp data.cpp convNet.cpp environment.cpp InputLayerCode.cpp trainer.cpp common.cpp nash.cpp MCTS.cpp kmeans.cpp
