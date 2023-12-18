@@ -67,6 +67,16 @@ bool Environment::validAgentAction(int agentID, int action){ // returns whether 
     return nbr.inBounds() && (getGridValue(nbr) == -1);
 }
 
+vector<int> Environment::validAgentActions(int agentID){
+    vector<int> actions;
+    for(int i=0; i<numAgentActions; i++){
+        if(validAgentAction(agentID, i)){
+            actions.push_back(i);
+        }
+    }
+    return actions;
+}
+
 // void Environment::setAgentAction(int agentID, int action){
 //     assert(validAgentAction(agentID, action));
 //     agentActions[agentID] = action;
@@ -145,8 +155,11 @@ void Environment::chanceAction(int actionIndex){
 }
 
 
-void Environment::inputSymmetric(Agent& net, int t, int activeAgent){
-    networkInput* a = net.input;
+void Environment::inputSymmetric(LSTM::PVUnit& net, int t, int activeAgent){
+    LSTM::Data* a = net.envInput;
+    for(int i=0; i<a->size; i++){
+        a->data[i] = 0;
+    }
     int m = boardx-1;
     int sym[8][2][3] = {
         {{ 1, 0, 0},{ 0, 1, 0}},
@@ -165,10 +178,7 @@ void Environment::inputSymmetric(Agent& net, int t, int activeAgent){
         for(int j=0; j<boardy; j++){
             x = sym[t][0][0]*i + sym[t][0][1]*j + sym[t][0][2];
             y = sym[t][1][0]*i + sym[t][1][1]*j + sym[t][1][2];
-            if(grid[i][j] == -1){
-                a->snake[x][y] = -1;
-            }
-            else{
+            if(grid[i][j] != -1){
                 int agentID = grid[i][j] / 5;
                 int dir = grid[i][j] % 5;
 
@@ -179,7 +189,8 @@ void Environment::inputSymmetric(Agent& net, int t, int activeAgent){
                 else{
                     inc = 6;
                 }
-                a->snake[x][y] = (symDir[t][0]*dir + symDir[t][1] + 4) % 4 + inc;
+                int dpt = (symDir[t][0]*dir + symDir[t][1] + 4) % 4 + inc;
+                a->data[dpt*(boardx*boardy) + x*boardy + y] = 1;
             }
         }
     }
@@ -197,21 +208,24 @@ void Environment::inputSymmetric(Agent& net, int t, int activeAgent){
         }
         x = sym[t][0][0]*snakes[i].head.x + sym[t][0][1]*snakes[i].head.y + sym[t][0][2];
         y = sym[t][1][0]*snakes[i].head.x + sym[t][1][1]*snakes[i].head.y + sym[t][1][2];
-        a->snake[x][y] = 4 + inc;
+        // a->snake[x][y] = 4 + inc;
+        a->data[(4+inc)*(boardx*boardy) + x*boardy + y] = 1;
         x = sym[t][0][0]*snakes[i].tail.x + sym[t][0][1]*snakes[i].tail.y + sym[t][0][2];
         y = sym[t][1][0]*snakes[i].tail.x + sym[t][1][1]*snakes[i].tail.y + sym[t][1][2];
-        a->snake[x][y] = 5 + inc;
+        // a->snake[x][y] = 5 + inc;
+        a->data[(5+inc)*(boardx*boardy) + x*boardy + y] = 1;
     }
     x = sym[t][0][0]*apple.x + sym[t][0][1]*apple.y + sym[t][0][2];
     y = sym[t][1][0]*apple.x + sym[t][1][1]*apple.y + sym[t][1][2];
-    a->snake[x][y] = 6*numAgents;
+    // a->snake[x][y] = 6*numAgents;
+    a->data[(6*numAgents)*(boardx*boardy) + x*boardy + y] = 1;
     
     // FILL IN VALID ACTIONS FOR NETWORK
-    if(actionType == 0){
-        for(int i=0; i<4; i++){
-            net.validAction[(symDir[t][0]*i + symDir[t][1] + 4) % 4] = validAgentAction(activeAgent, i);
-        }
-    }
+    // if(actionType == 0){
+    //     for(int i=0; i<4; i++){
+    //         net.validAction[(symDir[t][0]*i + symDir[t][1] + 4) % 4] = validAgentAction(activeAgent, i);
+    //     }
+    // }
 
     // // logging agent's input for debugging:
     // for(int i=0; i<boardx; i++){
@@ -271,6 +285,66 @@ void Environment::print(){ // optional function for debugging
     }
     fout.close();
     */
+}
+
+string Environment::toString(){
+    string s = "";
+    s += "Timer: " + to_string(timer) + '\n';
+    s += "Action type: " + to_string(actionType) + '\n';
+    s += "Snake sizes: ";
+    for(int i=0; i<numAgents; i++){
+        s += to_string(snakes[i].size) + ' ';
+    }
+    s += '\n';
+    char output[2*boardx+1][2*boardy+1];
+    for(int i=0; i<2*boardx+1; i++){
+        for(int j=0; j<2*boardy+1; j++){
+            output[i][j] = ' ';
+        }
+    }
+    for(int i=0; i<2*boardx+1; i++){
+        output[i][0] = '#';
+        output[i][2*boardy] = '#';
+    }
+    for(int j=0; j<2*boardy+1; j++){
+        output[0][j] = '#';
+        output[2*boardx][j] = '#';
+    }
+    char body[numAgents] = {'x', 'y'};
+    char head[numAgents] = {'X', 'Y'};
+    for(int i=0; i<boardx; i++){
+        for(int j=0; j<boardy; j++){
+            int val = getGridValue(Pos(i, j));
+            int snakeID = val / 5;
+            int d = val % 5;
+            char out;
+            if(apple == Pos(i, j)){
+                out = 'A';
+            }
+            else if(val == -1){
+                out = '.';
+            }
+            else if(d == 4){
+                out = head[snakeID];
+            }
+            else{
+                out = body[snakeID];
+                char bar;
+                if(d%2 == 0) bar = '-';
+                else bar = '|';
+                output[2*i+1 + dir[d][0]][2*j+1 + dir[d][1]] = bar;
+            }
+            output[2*i+1][2*j+1] = out;
+        }
+    }
+    for(int i=0; i<2*boardx+1; i++){
+        for(int j=0; j<2*boardy+1; j++){
+            s += output[i][j];
+        }
+        s += '\n';
+    }
+    s += '\n';
+    return s;
 }
 
 void Environment::log(string outFile){ // optional function for debugging

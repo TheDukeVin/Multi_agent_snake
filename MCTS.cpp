@@ -97,36 +97,48 @@ void MCTSModel::initializeNode(Environment& env, int currNode){
 //            }
 //        }
 //    }
+}
+
+void MCTSModel::evaluateEnv(Environment& env, int currNode, LSTM::PVUnit* currUnit){
     
     // Evaluate the network at the current node.
 
     double pred_values[numAgents];
     
     for(int m=0; m<numAgents; m++){
-        int symID = rand()%8;
-        env.inputSymmetric(a, symID, m);
+        // int symID = rand()%8;
+        int symID = 0;
+        
+        env.inputSymmetric(*currUnit, symID, m);
+        currUnit->forwardPass();
+        if(currNode == -1) continue;
+        pred_values[m] = currUnit->valueOutput->data[0];
         if(env.actionType == 0){
-            a.pass(PASS_FULL);
-        }
-        else{
-            a.pass(PASS_VALUE);
-        }
-        pred_values[m] = a.valueOutput;
-        if(env.actionType == 0){
-            for(int d=0; d<numAgentActions; d++){
-                if(env.validAgentAction(m, d)){
-                    policy[m][currNode][d] = a.policyOutput[(symDir[symID][0]*d + symDir[symID][1] + 4) % 4];
-                }
-                else{
-                    policy[m][currNode][d] = -1;
-                }
+            computeSoftmaxPolicy(currUnit->policyOutput->data, env.validAgentActions(m), policy[m][currNode]);
+            // for(int d=0; d<numAgentActions; d++){
+            //     if(env.validAgentAction(m, d)){
+            //         policy[m][currNode][d] = currUnit->policyOutput->data[(symDir[symID][0]*d + symDir[symID][1] + 4) % 4];
+            //     }
+            //     else{
+            //         policy[m][currNode][d] = -1;
+            //     }
                 
-                assert(env.isEndState() || (env.validAgentAction(m, d) == (policy[m][currNode][d] >= 0)));
-            }
+            //     assert(env.isEndState() || (env.validAgentAction(m, d) == (policy[m][currNode][d] >= 0)));
+            // }
         }
     }
     // a trick to regularize values for two-player zero-sum games.
+    if(currNode == -1) return;
     values[currNode] = (pred_values[ACTIVE_AGENT] - pred_values[ADVERSARY_AGENT]) / 2;
+
+}
+
+void MCTSModel::initActivations(int depth){
+    if(pathActivations.size() <= depth){
+        assert(pathActivations.size() == depth);
+        pathActivations.push_back(LSTM::PVUnit(a, &pathActivations[depth-1]));
+        pathActivations[pathActivations.size() - 1].copyParams(&a);
+    }
 }
 
 void MCTSModel::expandPath(){
@@ -140,6 +152,12 @@ void MCTSModel::expandPath(){
     double maxVal,candVal;
     int i;
     Environment env = rootEnv;
+
+    if(pathActivations.size() == 0){
+        pathActivations.push_back(LSTM::PVUnit(a, NULL));
+    }
+    pathActivations[0].copyParams(&a);
+    pathActivations[0].copyAct(&a);
 
     for(int i=0; i<2*maxTime; i++){
         times[i] = -1;
@@ -159,6 +177,13 @@ void MCTSModel::expandPath(){
         //     fout<<currNode<<'\n';
         //     fout.close();
         // }
+
+        // Evaluate environment state using network
+        if(count > 0){
+            initActivations(count);
+            evaluateEnv(env, -1, &pathActivations[count]);
+        }
+
         path[count] = currNode;
         env.computeRewards();
         rewards[count] = env.rewards[ACTIVE_AGENT];
@@ -230,6 +255,7 @@ void MCTSModel::expandPath(){
             // env.agentAction();
         }
         env.makeAction(chosenAction);
+
         currNode = outcomes[currNode][chosenAction.actionID()];
         assert(currNode != -2);
 
@@ -248,6 +274,8 @@ void MCTSModel::expandPath(){
     if(currNode == -1){
         outcomes[path[count-1]][expandAction] = index;
         initializeNode(env, index);
+        initActivations(count);
+        evaluateEnv(env, index, &pathActivations[count]);
         
         newVal = values[index];
         
@@ -403,6 +431,10 @@ void MCTSModel::simulateAction(Environment& env, Action chosenAction){
     rootEnv.makeAction(chosenAction);
     assert(rootEnv == env);
     rootIndex = outcomes[rootIndex][ID];
+
+    LSTM::PVUnit nextAct(a, &a);
+    evaluateEnv(env, rootIndex, &nextAct);
+    a.copyAct(&nextAct);
 
 
     // {

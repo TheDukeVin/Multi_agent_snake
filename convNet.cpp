@@ -5,7 +5,6 @@
 //  Created by Kevin Du on 1/17/22.
 //
 
-
 #include "snake.h"
 
 double randWeight(double startingParameterRange){

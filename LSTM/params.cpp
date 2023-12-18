@@ -1,6 +1,8 @@
 
 #include "lstm.h"
 
+using namespace LSTM;
+
 Params::Params(int size_){
     size = size_;
     params = new double[size];

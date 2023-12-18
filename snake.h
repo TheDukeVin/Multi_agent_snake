@@ -22,6 +22,7 @@
 #include <unordered_map>
 #include <stdio.h>
 #include <sstream>
+#include "LSTM/lstm.h"
 
 #ifndef snake_h
 #define snake_h
@@ -34,7 +35,8 @@ using namespace std;
 
 #define boardx 10
 #define boardy 10
-#define maxTime 1000
+// #define maxTime 1000
+#define maxTime 10
 
 #define numAgentActions 4
 #define numChanceActions (boardx * boardy)
@@ -156,15 +158,6 @@ private:
 // Input to the network
 
 
-struct networkInput{
-    // 0, 1, 2, 3 = snake units pointing to next unit.
-    // 4 = head of snake
-    // 5 = tail of snake
-    // +6k = agent k
-    // 6*numAgents = the apple.
-    int snake[boardx][boardy];
-};
-
 const int symDir[8][2] = {
     { 1,0},
     { 1,3},
@@ -174,6 +167,15 @@ const int symDir[8][2] = {
     {-1,2},
     {-1,3},
     {-1,0}
+};
+
+struct networkInput{
+    // 0, 1, 2, 3 = snake units pointing to next unit.
+    // 4 = head of snake
+    // 5 = tail of snake
+    // +6k = agent k
+    // 6*numAgents = the apple.
+    int snake[boardx][boardy];
 };
 
 class Layer{
@@ -360,7 +362,6 @@ public:
     void readNet(string fileName);
 };
 
-
 // Environment things
 
 const int numActions[2] = {numAgentActions, numChanceActions};
@@ -459,6 +460,7 @@ public:
     bool isEndState();
 
     bool validAgentAction(int agentID, int action); // from agentActions array
+    vector<int> validAgentActions(int agentID);
     bool validChanceAction(int pos);
 
     void makeAction(Action chosenAction);
@@ -467,10 +469,11 @@ public:
     void chanceAction(int actionIndex);
 
     //void setAction(Environment* currState, int actionIndex);
-    void inputSymmetric(Agent& net, int t, int activeAgent);
+    void inputSymmetric(LSTM::PVUnit& net, int t, int activeAgent);
     //void copyEnv(Environment* e);
     void print();// optional function for debugging
     void log(string outFile);// optional function for debugging
+    string toString();
     
     void computeRewards();
 
@@ -542,6 +545,8 @@ const int TRAIN_ADVERSARY = 1;
 const int TRAIN_MODE = 0;
 const int TEST_MODE = 1;
 
+void computeSoftmaxPolicy(double* logits, vector<int> validActions, double* policy); // -1 logit means invalid action.
+
 class MCTSModel{
 public:
     int ACTIVE_AGENT;
@@ -551,7 +556,14 @@ public:
 
     // MCTS model used to select moves for agent ACTIVE_AGENT.
     // Same model used to predict policy/value for both agents in the tree search
-    Agent a;
+
+    // Activations of root node:
+    // Note: must store both activations and parameters.
+    LSTM::PVUnit a;
+
+    // Activations along the path of the rollout:
+    vector<LSTM::PVUnit> pathActivations;
+    void initActivations(int depth);
     
     MCTSModel(){
         for(int i=0; i<maxStates; i++){
@@ -592,6 +604,7 @@ public:
 
     void simulateAction(Environment& env, Action chosenAction);
     
+    void evaluateEnv(Environment& env, int currNode, LSTM::PVUnit* currUnit); // if currNode is -1, we don't update the policy/value data but simply pass activations through the network.
     void expandPath();
     void printTree();
     void computeActionProbs();
@@ -601,10 +614,10 @@ public:
 
 class Trainer{
 public:
-    Agent a;
+    LSTM::PVUnit a;
 
     // test/train this agent against a competitor
-    Agent competitor;
+    LSTM::PVUnit competitor;
 
     int output_gameLength;
     Data* output_game;
@@ -623,6 +636,8 @@ public:
     
     Environment roots[maxTime*2];
     int rootIndices[maxTime*2];
+
+    Trainer(LSTM::PVUnit structure);
 
     void passParams();
 

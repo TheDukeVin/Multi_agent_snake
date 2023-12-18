@@ -8,6 +8,14 @@
 #include "snake.h"
 
 
+Trainer::Trainer(LSTM::PVUnit structure){
+    a = LSTM::PVUnit(structure, NULL);
+    competitor = LSTM::PVUnit(structure, NULL);
+    for(int m=0; m<numAgents; m++){
+        models[m].a = LSTM::PVUnit(structure, NULL);
+    }
+}
+
 void Trainer::trainGame(int mode){
     // cout<<"TRAIN GAME\n";
     double search_values[maxTime*2];
@@ -26,14 +34,14 @@ void Trainer::trainGame(int mode){
     }
     
     roots[0].initialize();
+    passParams();
     for(int m=0; m<numAgents; m++){
         // models[m].rootEnv = roots[0];
         models[m].rootIndex = 0;
         models[m].initializeNode(roots[0], 0);
+        models[m].evaluateEnv(roots[0], 0, &models[m].a);
         models[m].index = 1;
     }
-    models[TRAIN_ACTIVE].a.copyParam(a);
-    models[TRAIN_ADVERSARY].a.copyParam(competitor);
     valueOutput = to_string(roots[0].apple.x * boardy + roots[0].apple.y) + ' ';
     
     // In the multiagent case, chosenAction reflects the actions of ALL players.
@@ -41,6 +49,9 @@ void Trainer::trainGame(int mode){
 
     int r;
     for(r=0; r<maxTime*2; r++){
+        // cout << "Rollout set " << r << '\n';
+        // cout << roots[r].toString() << '\n';
+        
         // roots[r].log("games.out");
         rootIndices[r] = models[TRAIN_ACTIVE].rootIndex;
         for(int m=0; m<numAgents; m++){
@@ -109,6 +120,7 @@ void Trainer::trainGame(int mode){
     }
     valueOutput += "\n";
 
+    /*
     int numStates = r + 2;
     Data* game = new Data[numStates];
 
@@ -173,6 +185,7 @@ void Trainer::trainGame(int mode){
     valueOutput += "\n";
 //
 //    return &roots[numStates-1];
+*/
 }
 
 int Trainer::getRandomChanceAction(Environment* e){
@@ -198,6 +211,10 @@ void Trainer::passParams(){
         models[m].actionTemperature = actionTemperature;
         models[m].cUCB = cUCB;
     }
-    models[TRAIN_ACTIVE].a = a;
-    models[TRAIN_ADVERSARY].a = competitor;
+    models[TRAIN_ACTIVE].a.copyParams(&a);
+    models[TRAIN_ACTIVE].a.copyAct(&a);
+    models[TRAIN_ADVERSARY].a.copyParams(&competitor);
+    models[TRAIN_ADVERSARY].a.copyAct(&competitor);
+    // models[TRAIN_ACTIVE].a = a;
+    // models[TRAIN_ADVERSARY].a = competitor;
 }

@@ -33,6 +33,22 @@ double min(double x, double y){
 //    return x;
 // }
 
+void computeSoftmaxPolicy(double* logits, vector<int> validActions, double* policy){
+    double maxLogit = -1e+10;
+    for(auto a : validActions){
+        if(logits[a] > maxLogit){
+            maxLogit = logits[a];
+        }
+    }
+    double sum = 0;
+    for(auto a : validActions){
+        sum += exp(logits[a] - maxLogit);
+    }
+    for(auto a : validActions){
+        policy[a] = exp(logits[a] - maxLogit) / sum;
+    }
+}
+
 int sampleDist(double* dist, int N){
     double sum = 0;
     for(int i=0; i<N; i++){

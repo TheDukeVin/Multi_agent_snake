@@ -1,6 +1,8 @@
 
 #include "lstm.h"
 
+using namespace LSTM;
+
 PoolLayer::PoolLayer(Data* input_, Data* output_, Shape inputShape_, Shape outputShape_){
     input = input_;
     output = output_;

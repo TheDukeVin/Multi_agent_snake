@@ -1,6 +1,8 @@
 
 #include "lstm.h"
 
+using namespace LSTM;
+
 ConvLayer::ConvLayer(Data* input_, Data* output_, Shape inputShape_, Shape outputShape_, int convH_, int convW_){
     input = input_;
     output = output_;

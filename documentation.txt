@@ -159,3 +159,26 @@ Changed explorationConstant to cUCB
 8/2/23
 
 g++ -O2 -std=c++11 -pthread main.cpp data.cpp convNet.cpp environment.cpp InputLayerCode.cpp trainer.cpp common.cpp nash.cpp MCTS.cpp kmeans.cpp
+
+10/23/23
+g++ -O2 -std=c++11 -pthread main.cpp data.cpp environment.cpp trainer.cpp common.cpp nash.cpp MCTS.cpp kmeans.cpp
+
+11/13/23
+g++ -O2 -std=c++11 -pthread main.cpp data.cpp environment.cpp trainer.cpp common.cpp nash.cpp MCTS.cpp kmeans.cpp convNet.cpp InputLayerCode.cpp -I "/Users/kevindu/Desktop/Employment/Multiagent Snake Research/multiagent_snake/LSTM" LSTM/model.cpp LSTM/PVUnit.cpp LSTM/layer.cpp LSTM/layers/lstmlayer.cpp LSTM/layers/policy.cpp LSTM/layers/conv.cpp LSTM/layers/pool.cpp LSTM/params.cpp LSTM/node.cpp
+
+g++ -O2 -std=c++11 -pthread main.cpp environment.cpp MCTS.cpp trainer.cpp common.cpp nash.cpp kmeans.cpp convNet.cpp InputLayerCode.cpp -I "/Users/kevindu/Desktop/Employment/Multiagent Snake Research/multiagent_snake/LSTM" LSTM/model.cpp LSTM/PVUnit.cpp LSTM/layer.cpp LSTM/layers/lstmlayer.cpp LSTM/layers/policy.cpp LSTM/layers/conv.cpp LSTM/layers/pool.cpp LSTM/params.cpp LSTM/node.cpp
+
+-fsanitize=address -fsanitize=undefined -fno-sanitize-recover=all -fsanitize=float-divide-by-zero -fsanitize=float-cast-overflow -fno-sanitize=null -fno-sanitize=alignment
+
+12/17/23
+
+BUG: when running locally, make sure maxStates is small. Otherwise you get an error:
+AddressSanitizer:DEADLYSIGNAL
+=================================================================
+==49781==ERROR: AddressSanitizer: stack-overflow on address 0x00016b5a8fc0 (pc 0x0001026c8a54 bp 0x00018b4c1430 sp 0x00016b5a8fa0 T0)
+    #0 0x1026c8a54 in main+0x7c (a.out:arm64+0x100004a54)
+
+SUMMARY: AddressSanitizer: stack-overflow (a.out:arm64+0x100004a54) in main+0x7c
+==49781==ABORTING
+zsh: abort      ./a.out
+

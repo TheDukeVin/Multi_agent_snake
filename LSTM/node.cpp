@@ -1,6 +1,8 @@
 
 #include "lstm.h"
 
+using namespace LSTM;
+
 Data::Data(int size_){
     size = size_;
     data = new double[size];
@@ -19,6 +21,12 @@ Data::Data(int size_, double* data_, double* gradient_){
 void Data::resetGradient(){
     for(int i=0; i<size; i++){
         gradient[i] = 0;
+    }
+}
+
+void Data::copy(Data* d){
+    for(int i=0; i<size; i++){
+        data[i] = d->data[i];
     }
 }
 
@@ -243,7 +251,7 @@ PoolNode::PoolNode(Data* i1_, Data* o_, Shape input_, Shape output_){
     input = input_;
     output = output_;
 
-    maxIndices = new int[output.depth * output.height * output.width];
+    maxIndices = new int[output.getSize()];
 }
 
 void PoolNode::forwardPass(){
@@ -265,6 +273,7 @@ void PoolNode::forwardPass(){
                         }
                     }
                 }
+                // assert(maxIndex >= 0);
                 index = j*output.height*output.width + x*output.width + y;
                 o->data[index] = maxVal;
                 maxIndices[index] = maxIndex;
@@ -274,7 +283,13 @@ void PoolNode::forwardPass(){
 }
 
 void PoolNode::backwardPass(){
-    for(int i=0; i<output.depth*output.height*output.width; i++){
+    // cout << input.depth << ' ' << input.height << ' ' << input.width << '\n';
+    // cout << output.depth << ' ' << output.height << ' ' << output.width << '\n';
+    // cout << this << '\n';
+    // cout << maxIndices << '\n';
+    for(int i=0; i<output.getSize(); i++){
+        // cout << maxIndices[i] << '\n';
+        // assert(0 <= maxIndices[i] && maxIndices[i] < input.getSize());
         i1->gradient[maxIndices[i]] += o->gradient[i];
     }
 }

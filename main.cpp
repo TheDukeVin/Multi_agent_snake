@@ -6,6 +6,11 @@ Uses MARL framework.
 */
 
 #include "snake.h"
+#include "LSTM/test.h"
+
+using namespace std;
+
+/*
 
 // dq is too big to be defined in the Trainer class, so it is defined outside.
 
@@ -112,18 +117,20 @@ void runThread(Trainer* t){
 
 void trainCycle(){
     cout<<"Beginning training: "<<time(NULL)<<'\n';
-    Agent a;
+    LSTM::PVUnit a;
     standardSetup(a);
 
     // a.readNet("nets/Game400.out");
 
     for(int i=0; i<NUM_THREADS; i++){
-        trainers[i] = new Trainer();
-        standardSetup(trainers[i]->a);
-        standardSetup(trainers[i]->competitor);
-        for(int m=0; m<numAgents; m++){
-            standardSetup(trainers[i]->models[m].a);
-        }
+        trainers[i] = new Trainer(a);
+
+        // standardSetup(trainers[i]->a);
+        // standardSetup(trainers[i]->competitor);
+        // for(int m=0; m<numAgents; m++){
+        //     standardSetup(trainers[i]->models[m].a);
+        // }
+
         //trainers[i]->adversaries[0].readNet("nets/Game1600.out");
     }
 
@@ -132,11 +139,9 @@ void trainCycle(){
         standardSetup(opponents[i]);
     }
     nashDist[0] = 1;
-    standardSetup(testing_ground.a);
-    standardSetup(testing_ground.competitor);
-    for(int m=0; m<numAgents; m++){
-        standardSetup(testing_ground.models[m].a);
-    }
+
+    testing_ground = Trainer(a);
+
     //cout<<"Reading net:\n";
     //t.a.readNet("snakeConv.in");
 
@@ -343,6 +348,20 @@ void trainCycle(){
     
 }
 
+*/
+
+
+
+
+
+
+
+
+
+
+
+// Tabular methods
+
 //vector<Environment> nextStates(Environment e){
     // vector<Environment> states;
     // if(e.actionType == 0){
@@ -400,80 +419,125 @@ void trainCycle(){
 //     }*/
 // }
 
-int numActivations = 100;
 
-void get_embedding(){
-    dq.currSize = 10000;
-    dq.readGames("details.out");
-    vector<Environment> states;
-    for(int i=0; i<dq.currSize; i++){
-        for(int j=0; j<dq.gameLengths[i]; j++){
-            states.push_back(dq.queue[i][j].e);
-        }
-    }
-    cout<<states.size()<<'\n';
-    Agent net;
-    standardSetup(net);
-    net.readNet("nets/Game10000.out");
-    ofstream fout ("embed.out");
-    Branch policy_branch = net.policyBranch;
-    Layer* lastLayer = policy_branch.layers[policy_branch.numLayers-1];
-    for(auto s : states){
-        s.inputSymmetric(net, 0, 0);
-        net.pass(PASS_FULL);
-        for(int i=0; i<numActivations; i++){
-            fout<<lastLayer->inputs[i]<<' ';
-        }
-        fout<<'\n';
-    }
-}
 
-void cluster(){
-    dq.currSize = 10000;
-    dq.readGames("details.out");
-    vector<Environment> states;
-    for(int i=0; i<dq.currSize; i++){
-        for(int j=0; j<dq.gameLengths[i]; j++){
-            states.push_back(dq.queue[i][j].e);
-        }
-    }
-    int N = states.size();
-    cout<<N<<'\n';
-    ifstream fin ("embed.in");
-    double data[N*numActivations];
-    for(int i=0; i<N; i++){
-        for(int j=0; j<numActivations; j++){
-            fin >> data[i*numActivations + j];
-        }
-    }
-    cout<<"Read data\n";
-    Kmeans km(data, numActivations, N);
-    km.cluster(100, 100, 0.001);
-}
 
-void testKmeans(){
-    double data[8] = {
-        1, 1,
-        2, 2,
-        1, 6,
-        3, 6
-    };
-    Kmeans km(data, 2, 4);
-    km.cluster(2, 10, 0.001);
-    for(int i=0; i<2; i++){
-        for(int j=0; j<2; j++){
-            cout<<km.centers[i][j]<<' ';
-        }
-        cout<<'\n';
-    }
-}
+
+
+
+
+
+
+
+// K-means Clustering:
+
+// int numActivations = 100;
+
+// void get_embedding(){
+//     dq.currSize = 10000;
+//     dq.readGames("details.out");
+//     vector<Environment> states;
+//     for(int i=0; i<dq.currSize; i++){
+//         for(int j=0; j<dq.gameLengths[i]; j++){
+//             states.push_back(dq.queue[i][j].e);
+//         }
+//     }
+//     cout<<states.size()<<'\n';
+//     Agent net;
+//     standardSetup(net);
+//     net.readNet("nets/Game10000.out");
+//     ofstream fout ("embed.out");
+//     Branch policy_branch = net.policyBranch;
+//     Layer* lastLayer = policy_branch.layers[policy_branch.numLayers-1];
+//     for(auto s : states){
+//         s.inputSymmetric(net, 0, 0);
+//         net.pass(PASS_FULL);
+//         for(int i=0; i<numActivations; i++){
+//             fout<<lastLayer->inputs[i]<<' ';
+//         }
+//         fout<<'\n';
+//     }
+// }
+
+// void cluster(){
+//     dq.currSize = 10000;
+//     dq.readGames("details.out");
+//     vector<Environment> states;
+//     for(int i=0; i<dq.currSize; i++){
+//         for(int j=0; j<dq.gameLengths[i]; j++){
+//             states.push_back(dq.queue[i][j].e);
+//         }
+//     }
+//     int N = states.size();
+//     cout<<N<<'\n';
+//     ifstream fin ("embed.in");
+//     double data[N*numActivations];
+//     for(int i=0; i<N; i++){
+//         for(int j=0; j<numActivations; j++){
+//             fin >> data[i*numActivations + j];
+//         }
+//     }
+//     cout<<"Read data\n";
+//     Kmeans km(data, numActivations, N);
+//     km.cluster(100, 100, 0.001);
+// }
+
+// void testKmeans(){
+//     double data[8] = {
+//         1, 1,
+//         2, 2,
+//         1, 6,
+//         3, 6
+//     };
+//     Kmeans km(data, 2, 4);
+//     km.cluster(2, 10, 0.001);
+//     for(int i=0; i<2; i++){
+//         for(int j=0; j<2; j++){
+//             cout<<km.centers[i][j]<<' ';
+//         }
+//         cout<<'\n';
+//     }
+// }
 
 int main()
 {
     srand((unsigned)time(NULL));
-    start_time = time(NULL);
+    long start_time = time(NULL);
 
-    
+    // PVTest tester;
+    // tester.test();
+
+    // net.commonBranch.initEnvironmentInput(10, 10, 10, 3, 3);
+    // net.commonBranch.addConvLayer(15, 10, 10, 3, 3);
+    // net.commonBranch.addPoolLayer(15, 5, 5);
+    // net.setupCommonBranch();
+    // net.policyBranch.addFullyConnectedLayer(200);
+    // net.policyBranch.addFullyConnectedLayer(100);
+    // net.policyBranch.addOutputLayer(4);
+    // net.valueBranch.addFullyConnectedLayer(200);
+    // net.valueBranch.addFullyConnectedLayer(100);
+    // net.valueBranch.addOutputLayer(1);
+    // net.setup();
+    // net.randomize(0.2);
+
+    cout << "Generating structure...\n";
+    LSTM::PVUnit structure;
+    structure.commonBranch = new LSTM::Model(LSTM::Shape(10, 10, 13));
+    structure.commonBranch->addConv(LSTM::Shape(10, 10, 10), 3, 3);
+    structure.commonBranch->addConv(LSTM::Shape(10, 10, 15), 3, 3);
+    structure.commonBranch->addPool(LSTM::Shape(5, 5, 15));
+    structure.initPV();
+    structure.policyBranch->addLSTM(200);
+    structure.policyBranch->addLSTM(100);
+    structure.policyBranch->addOutput(4);
+    structure.valueBranch->addLSTM(200);
+    structure.valueBranch->addLSTM(100);
+    structure.valueBranch->addOutput(1);
+    structure.randomize(0.1);
+
+    cout << "Initializing trainer...\n";
+    Trainer t(structure);
+    t.trainGame(TRAIN_MODE);
     
     /*
     for(int i=0; i<1; i++){
@@ -493,7 +557,7 @@ int main()
     // cluster();
 
     size_t end_time = time(NULL);
-    cout<< "TIME: "<<(end_time - start_time);
+    cout<< "TIME: "<<(end_time - start_time) << '\n';
     
     return 0;
     

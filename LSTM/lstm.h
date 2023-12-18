@@ -2,6 +2,8 @@
 /*
 g++ -O2 -std=c++11 -pthread main.cpp modelseq.cpp model.cpp layer.cpp lstm.cpp policy.cpp params.cpp node.cpp
 
+g++ -O2 -std=c++11 -fsanitize=address -fsanitize=undefined -fno-sanitize-recover=all -fsanitize=float-divide-by-zero -fsanitize=float-cast-overflow -fno-sanitize=null -fno-sanitize=alignment -I "/Users/kevindu/Desktop/Employment/Multiagent Snake Research/multiagent_snake/LSTM" main.cpp model.cpp PVUnit.cpp layer.cpp layers/lstmlayer.cpp layers/policy.cpp layers/conv.cpp layers/pool.cpp params.cpp node.cpp
+
 -fsanitize=address -fsanitize=undefined -fno-sanitize-recover=all -fsanitize=float-divide-by-zero -fsanitize=float-cast-overflow -fno-sanitize=null -fno-sanitize=alignment
 
 rsync -r LSTM kevindu@login.rc.fas.harvard.edu:./MultiagentSnake
@@ -22,6 +24,9 @@ rsync -r kevindu@login.rc.fas.harvard.edu:./MultiagentSnake/LSTM/net.out LSTM
 #define lstm_h
 using namespace std;
 
+namespace LSTM
+{
+
 int sampleDist(double* dist, int N);
 
 class Data{
@@ -35,6 +40,7 @@ public:
     Data(int size_, double* data_, double* gradient_);
 
     void resetGradient();
+    void copy(Data* d);
 };
 
 class Node{
@@ -180,16 +186,18 @@ public:
     void forwardPass(); // resets gradient of all data
     void backwardPass();
 
+    void copyAct(Layer* l);
+
     virtual void vf(){};
 };
 
-class LSTM : public Layer{
+class LSTMLayer : public Layer{
 public:
     Data* cell;
 
     // Looks at previous unit's output and cell.
-    LSTM(int size); // empty LSTM to start the chain
-    LSTM(Data* input_, Data* output_, LSTM* prevUnit);
+    LSTMLayer(int size); // empty LSTM to start the chain
+    LSTMLayer(Data* input_, Data* output_, LSTMLayer* prevUnit);
 
     double nonlinear(double x);
     double dinvnonlinear(double x);
@@ -253,6 +261,7 @@ public:
     Model(Model structure, Model* prevModel, Data* input, Data* output);
 
     void copyParams(Model* m);
+    void copyAct(Model* m);
     void randomize(double scale);
 
     void forwardPass();
@@ -260,6 +269,41 @@ public:
 
     void resetGradient();
     void accumulateGradient(Model* m);
+    void updateParams(double scale, double momentum, double regRate);
+
+    void save(string fileOut);
+    void load(string fileIn);
+};
+
+class PVUnit{
+public:
+    Model* commonBranch;
+    Model* policyBranch;
+    Model* valueBranch;
+    vector<Model*> allBranches;
+
+    Data* envInput;
+    Data* commonComp;
+    Data* policyOutput;
+    Data* valueOutput;
+
+    // Construct a structure for commonBranch, policyBranch, and valueBranch first
+    PVUnit(){}
+    void initPV();
+    void setupPV();
+
+    // Then define new instances of the structure
+    PVUnit(PVUnit structure, PVUnit* prevUnit);
+
+    void copyParams(PVUnit* unit);
+    void copyAct(PVUnit* unit);
+    void randomize(double scale);
+
+    void forwardPass();
+    void backwardPass();
+
+    void resetGradient();
+    void accumulateGradient(PVUnit* unit);
     void updateParams(double scale, double momentum, double regRate);
 
     void save(string fileOut);
@@ -285,5 +329,5 @@ public:
 
     double getLoss();
 };
-
+}
 #endif

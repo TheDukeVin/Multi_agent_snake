@@ -1,6 +1,8 @@
 
 #include "lstm.h"
 
+using namespace LSTM;
+
 void Dense::setupLayer(Data* input_, Data* output_, string operation){
     input = input_;
     output = output_;

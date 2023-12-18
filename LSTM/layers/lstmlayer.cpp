@@ -1,7 +1,9 @@
 
 #include "lstm.h"
 
-LSTM::LSTM(int size){
+using namespace LSTM;
+
+LSTMLayer::LSTMLayer(int size){
     output = new Data(size);
     cell = new Data(size);
     for(int i=0; i<size; i++){
@@ -10,14 +12,14 @@ LSTM::LSTM(int size){
     }
 }
 
-LSTM::LSTM(Data* input_, Data* output_, LSTM* prevUnit){
+LSTMLayer::LSTMLayer(Data* input_, Data* output_, LSTMLayer* prevUnit){
     input = input_;
     output = output_;
     inputSize = input->size;
     outputSize = output->size;
     params = Params(4 * ((inputSize + outputSize + 1) * outputSize));
     if(prevUnit == NULL){
-        prevUnit = new LSTM(outputSize);
+        prevUnit = new LSTMLayer(outputSize);
     }
 
     // Initialize Data and Nodes

@@ -1,7 +1,7 @@
 
 #include "lstm.h"
 #include "test.h"
-#include "PG.h"
+// #include "PG.h"
 
 // Run training sessions in parallel
 
@@ -15,12 +15,12 @@
 //     trainers[i].train();
 // }
 
-void testGrad(){
-    GradientTest grad;
-    for(int i=0; i<100; i++){
-        grad.test();
-    }
-}
+// void testGrad(){
+//     GradientTest grad;
+//     for(int i=0; i<100; i++){
+//         grad.test();
+//     }
+// }
 
 // void testSuper(){
 //     for(int i=0; i<numThreads; i++){
@@ -35,33 +35,39 @@ void testGrad(){
 //     // super.train();
 // }
 
-const int numThreads = 1;
-PG trainers[numThreads];
 
-void runThread(int i){
-    trainers[i].fileOut = "session" + to_string(i) + ".out";
-    if(i < 1){
-        // trainers[i].learnRate = 0.01;
-        // trainers[i].momentum = 0.7;
-    }
-    // else if(i < 20){
-    //     trainers[i].learnRate = 0.005;
-    //     trainers[i].momentum = 0.9;
-    // }
-    trainers[i].trainParallel(1000, 100000);
-}
 
-void runPG(){
-    thread* threads[numThreads];
-    for(int i=0; i<numThreads; i++){
-        threads[i] = new thread(runThread, i);
-    }
-    for(int i=0; i<numThreads; i++){
-        threads[i]->join();
-        cout<<trainers[i].finalReward<<'\n';
-    }
-    trainers[0].seq.paramStore.save("net.out");
-}
+
+// const int numThreads = 1;
+// PG trainers[numThreads];
+
+// void runThread(int i){
+//     trainers[i].fileOut = "session" + to_string(i) + ".out";
+//     if(i < 1){
+//         // trainers[i].learnRate = 0.01;
+//         // trainers[i].momentum = 0.7;
+//     }
+//     // else if(i < 20){
+//     //     trainers[i].learnRate = 0.005;
+//     //     trainers[i].momentum = 0.9;
+//     // }
+//     trainers[i].trainParallel(1000, 100000);
+// }
+
+// void runPG(){
+//     thread* threads[numThreads];
+//     for(int i=0; i<numThreads; i++){
+//         threads[i] = new thread(runThread, i);
+//     }
+//     for(int i=0; i<numThreads; i++){
+//         threads[i]->join();
+//         cout<<trainers[i].finalReward<<'\n';
+//     }
+//     trainers[0].seq.paramStore.save("net.out");
+// }
+
+
+
 
 // void testPoker1(){
 //     Hand H1;
@@ -132,7 +138,7 @@ int main(){
     srand(time(0));
     int start_time = time(0);
 
-    testGrad();
+    // testGrad();
 
     // testSuper();
 
@@ -157,4 +163,10 @@ int main(){
     // cout << "Final reward: " << runner.rollOutRewardSum << '\n';
 
     // cout<<"TIME: "<<(time(0) - start_time)<<'\n';
+
+    // PVTest tester;
+    // tester.test();
+
+    ModelTest tester;
+    tester.test();
 }

@@ -1,6 +1,8 @@
 
 #include "lstm.h"
 
+using namespace LSTM;
+
 Data* Layer::addData(int size){
     Data* data = new Data(size);
     allHiddenData.push_back(data);
@@ -27,4 +29,12 @@ void Layer::resetGradient(){
         allHiddenData[i]->resetGradient();
     }
     params.resetGradient();
+}
+
+void Layer::copyAct(Layer* l){
+    input->copy(l->input);
+    output->copy(l->output);
+    for(int i=0; i<allHiddenData.size(); i++){
+        allHiddenData[i]->copy(l->allHiddenData[i]);
+    }
 }
