@@ -33,7 +33,7 @@ double min(double x, double y){
 //    return x;
 // }
 
-void computeSoftmaxPolicy(double* logits, vector<int> validActions, double* policy){
+void computeSoftmaxPolicy(double* logits, int size, vector<int> validActions, double* policy){
     double maxLogit = -1e+10;
     for(auto a : validActions){
         if(logits[a] > maxLogit){
@@ -43,6 +43,9 @@ void computeSoftmaxPolicy(double* logits, vector<int> validActions, double* poli
     double sum = 0;
     for(auto a : validActions){
         sum += exp(logits[a] - maxLogit);
+    }
+    for(int i=0; i<size; i++){
+        policy[i] = -1;
     }
     for(auto a : validActions){
         policy[a] = exp(logits[a] - maxLogit) / sum;

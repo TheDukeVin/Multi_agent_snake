@@ -18,7 +18,6 @@ void MCTSModel::initializeNode(Environment& env, int currNode){
     if(actionSums[currNode] != NULL){
         delete actionSums[currNode];
     }
-    //int numOutcomes = numActions[env.actionType];
     if(env.actionType == 0){
         outcomes[currNode] = new int[numAgentActions * numAgentActions];
         for(int i=0; i<numAgentActions; i++){
@@ -114,7 +113,7 @@ void MCTSModel::evaluateEnv(Environment& env, int currNode, LSTM::PVUnit* currUn
         if(currNode == -1) continue;
         pred_values[m] = currUnit->valueOutput->data[0];
         if(env.actionType == 0){
-            computeSoftmaxPolicy(currUnit->policyOutput->data, env.validAgentActions(m), policy[m][currNode]);
+            computeSoftmaxPolicy(currUnit->policyOutput->data, numAgentActions, env.validAgentActions(m), policy[m][currNode]);
             // for(int d=0; d<numAgentActions; d++){
             //     if(env.validAgentAction(m, d)){
             //         policy[m][currNode][d] = currUnit->policyOutput->data[(symDir[symID][0]*d + symDir[symID][1] + 4) % 4];
@@ -133,13 +132,13 @@ void MCTSModel::evaluateEnv(Environment& env, int currNode, LSTM::PVUnit* currUn
 
 }
 
-void MCTSModel::initActivations(int depth){
-    if(pathActivations.size() <= depth){
-        assert(pathActivations.size() == depth);
-        pathActivations.push_back(LSTM::PVUnit(a, &pathActivations[depth-1]));
-        pathActivations[pathActivations.size() - 1].copyParams(&a);
-    }
-}
+// void MCTSModel::initActivations(int depth){
+//     if(pathActivations.size() <= depth){
+//         assert(pathActivations.size() == depth);
+//         pathActivations.push_back(LSTM::PVUnit(a, &pathActivations[depth-1]));
+//         pathActivations[pathActivations.size() - 1].copyParams(&a);
+//     }
+// }
 
 void MCTSModel::expandPath(){
     int currNode = rootIndex;
@@ -153,11 +152,14 @@ void MCTSModel::expandPath(){
     int i;
     Environment env = rootEnv;
 
-    if(pathActivations.size() == 0){
-        pathActivations.push_back(LSTM::PVUnit(a, NULL));
-    }
-    pathActivations[0].copyParams(&a);
-    pathActivations[0].copyAct(&a);
+    // if(pathActivations.size() == 0){
+    //     pathActivations.push_back(LSTM::PVUnit(a, NULL));
+    // }
+    // pathActivations[0].copyParams(&a);
+    // pathActivations[0].copyAct(&a);
+    currUnit->copyParams(a);
+    currUnit->copyAct(a);
+    nextUnit->copyParams(a);
 
     for(int i=0; i<2*maxTime; i++){
         times[i] = -1;
@@ -180,8 +182,10 @@ void MCTSModel::expandPath(){
 
         // Evaluate environment state using network
         if(count > 0){
-            initActivations(count);
-            evaluateEnv(env, -1, &pathActivations[count]);
+            // initActivations(count);
+            evaluateEnv(env, -1, nextUnit);
+            // copy new hidden state activations into currUnit
+            currUnit->copyAct(nextUnit);
         }
 
         path[count] = currNode;
@@ -274,8 +278,8 @@ void MCTSModel::expandPath(){
     if(currNode == -1){
         outcomes[path[count-1]][expandAction] = index;
         initializeNode(env, index);
-        initActivations(count);
-        evaluateEnv(env, index, &pathActivations[count]);
+        // initActivations(count);
+        evaluateEnv(env, index, nextUnit);
         
         newVal = values[index];
         
@@ -432,9 +436,9 @@ void MCTSModel::simulateAction(Environment& env, Action chosenAction){
     assert(rootEnv == env);
     rootIndex = outcomes[rootIndex][ID];
 
-    LSTM::PVUnit nextAct(a, &a);
-    evaluateEnv(env, rootIndex, &nextAct);
-    a.copyAct(&nextAct);
+    nextRoot->copyParams(a);
+    evaluateEnv(env, rootIndex, nextRoot);
+    a->copyAct(nextRoot);
 
 
     // {

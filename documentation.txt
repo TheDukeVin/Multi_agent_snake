@@ -164,9 +164,7 @@ g++ -O2 -std=c++11 -pthread main.cpp data.cpp convNet.cpp environment.cpp InputL
 g++ -O2 -std=c++11 -pthread main.cpp data.cpp environment.cpp trainer.cpp common.cpp nash.cpp MCTS.cpp kmeans.cpp
 
 11/13/23
-g++ -O2 -std=c++11 -pthread main.cpp data.cpp environment.cpp trainer.cpp common.cpp nash.cpp MCTS.cpp kmeans.cpp convNet.cpp InputLayerCode.cpp -I "/Users/kevindu/Desktop/Employment/Multiagent Snake Research/multiagent_snake/LSTM" LSTM/model.cpp LSTM/PVUnit.cpp LSTM/layer.cpp LSTM/layers/lstmlayer.cpp LSTM/layers/policy.cpp LSTM/layers/conv.cpp LSTM/layers/pool.cpp LSTM/params.cpp LSTM/node.cpp
-
-g++ -O2 -std=c++11 -pthread main.cpp environment.cpp MCTS.cpp trainer.cpp common.cpp nash.cpp kmeans.cpp convNet.cpp InputLayerCode.cpp -I "/Users/kevindu/Desktop/Employment/Multiagent Snake Research/multiagent_snake/LSTM" LSTM/model.cpp LSTM/PVUnit.cpp LSTM/layer.cpp LSTM/layers/lstmlayer.cpp LSTM/layers/policy.cpp LSTM/layers/conv.cpp LSTM/layers/pool.cpp LSTM/params.cpp LSTM/node.cpp
+g++ -O2 -std=c++11 -pthread main.cpp data.cpp environment.cpp trainer.cpp common.cpp nash.cpp MCTS.cpp kmeans.cpp convNet.cpp InputLayerCode.cpp -I "/Users/kevindu/Desktop/Employment/Multiagent Snake Research/multiagent_snake/LSTM" LSTM/model.cpp LSTM/PVUnit.cpp LSTM/layer.cpp LSTM/layers/lstmlayer.cpp LSTM/layers/policy.cpp LSTM/layers/conv.cpp LSTM/layers/pool.cpp LSTM/params.cpp LSTM/node.cpp && ./a.out
 
 -fsanitize=address -fsanitize=undefined -fno-sanitize-recover=all -fsanitize=float-divide-by-zero -fsanitize=float-cast-overflow -fno-sanitize=null -fno-sanitize=alignment
 
@@ -182,3 +180,18 @@ SUMMARY: AddressSanitizer: stack-overflow (a.out:arm64+0x100004a54) in main+0x7c
 ==49781==ABORTING
 zsh: abort      ./a.out
 
+g++ -O2 -std=c++11 -pthread main.cpp data.cpp environment.cpp trainer.cpp common.cpp nash.cpp MCTS.cpp kmeans.cpp convNet.cpp InputLayerCode.cpp -I "./LSTM" LSTM/model.cpp LSTM/PVUnit.cpp LSTM/layer.cpp LSTM/layers/lstmlayer.cpp LSTM/layers/policy.cpp LSTM/layers/conv.cpp LSTM/layers/pool.cpp LSTM/params.cpp LSTM/node.cpp && sbatch snake.slurm
+
+g++ -O2 -std=c++11 -pthread  main.cpp data.cpp environment.cpp trainer.cpp common.cpp nash.cpp MCTS.cpp kmeans.cpp convNet.cpp InputLayerCode.cpp -I "./LSTM" LSTM/model.cpp LSTM/PVUnit.cpp LSTM/layer.cpp LSTM/layers/lstmlayer.cpp LSTM/layers/policy.cpp LSTM/layers/conv.cpp LSTM/layers/pool.cpp LSTM/params.cpp LSTM/node.cpp && ./a.out
+
+-fsanitize=address -fsanitize=undefined -fno-sanitize-recover=all -fsanitize=float-divide-by-zero -fsanitize=float-cast-overflow -fno-sanitize=null -fno-sanitize=alignment
+
+Slurm command:
+#SBATCH --mem=10000 # Memory per node in MB (see also --mem-per-cpu)
+#SBATCH --mem-per-cpu=1000 # Memory per cpu in MB
+
+1/19/24
+
+When running at one thread, each game takes ~80s to run.
+When running two threads, Thread 1 takes ~90s. Thread 2 takes an additional ~20s.
+When running 10 threads, Thread 1 takes ~110s. Each additional thread takes ~20s.

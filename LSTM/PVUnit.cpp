@@ -15,20 +15,22 @@ void PVUnit::setupPV(){
     allBranches.push_back(valueBranch);
 }
 
-PVUnit::PVUnit(PVUnit structure, PVUnit* prevUnit){
-    envInput = new Data(structure.commonBranch->inputSize);
-    commonComp = new Data(structure.commonBranch->outputSize);
-    policyOutput = new Data(structure.policyBranch->outputSize);
-    valueOutput = new Data(structure.valueBranch->outputSize);
+PVUnit::PVUnit(PVUnit* structure, PVUnit* prevUnit){
+    // cout << "creating data\n";
+    envInput = new Data(structure->commonBranch->inputSize);
+    commonComp = new Data(structure->commonBranch->outputSize);
+    policyOutput = new Data(structure->policyBranch->outputSize);
+    valueOutput = new Data(structure->valueBranch->outputSize);
+    // cout << "creating models\n";
     if(prevUnit == NULL){
-        commonBranch = new Model(*structure.commonBranch, NULL, envInput, commonComp);
-        policyBranch = new Model(*structure.policyBranch, NULL, commonComp, policyOutput);
-        valueBranch = new Model(*structure.valueBranch, NULL, commonComp, valueOutput);
+        commonBranch = new Model(structure->commonBranch, NULL, envInput, commonComp);
+        policyBranch = new Model(structure->policyBranch, NULL, commonComp, policyOutput);
+        valueBranch = new Model(structure->valueBranch, NULL, commonComp, valueOutput);
     }
     else{
-        commonBranch = new Model(*structure.commonBranch, prevUnit->commonBranch, envInput, commonComp);
-        policyBranch = new Model(*structure.policyBranch, prevUnit->policyBranch, commonComp, policyOutput);
-        valueBranch = new Model(*structure.valueBranch, prevUnit->valueBranch, commonComp, valueOutput);
+        commonBranch = new Model(structure->commonBranch, prevUnit->commonBranch, envInput, commonComp);
+        policyBranch = new Model(structure->policyBranch, prevUnit->policyBranch, commonComp, policyOutput);
+        valueBranch = new Model(structure->valueBranch, prevUnit->valueBranch, commonComp, valueOutput);
     }
     // cout << commonBranch->inputSize << ' ' << policyBranch->inputSize << ' ' << valueBranch->inputSize << '\n';
     setupPV();
@@ -36,6 +38,7 @@ PVUnit::PVUnit(PVUnit structure, PVUnit* prevUnit){
     //     cout<<"Branch " << i<<'\n';
     //     cout << allBranches[i]->inputSize << '\n';
     // }
+    // cout << "Completed constructor\n";
 }
 
 void PVUnit::copyParams(PVUnit* unit){

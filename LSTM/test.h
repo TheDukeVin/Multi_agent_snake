@@ -84,14 +84,14 @@ public:
         double epsilon = 1e-07;
         double tol = 1e-04;
         for(int i=0; i<structure.layers.size(); i++){
-            for(int j=0; j<structure.layers[i]->params.size; j++){
-                structure.layers[i]->params.params[j] += epsilon;
+            for(int j=0; j<structure.layers[i]->params->size; j++){
+                structure.layers[i]->params->params[j] += epsilon;
                 forwardPass();
                 double newLoss = getLoss();
-                structure.layers[i]->params.params[j] -= epsilon;
+                structure.layers[i]->params->params[j] -= epsilon;
                 double derivative = (newLoss - initLoss) / epsilon;
-                assert(abs(derivative - structure.layers[i]->params.gradient[j]) < tol);
-                cout << derivative << ' ' << structure.layers[i]->params.gradient[j] << '\n';
+                assert(abs(derivative - structure.layers[i]->params->gradient[j]) < tol);
+                cout << derivative << ' ' << structure.layers[i]->params->gradient[j] << '\n';
             }
         }
     }
@@ -191,13 +191,13 @@ public:
         double tol = 1e-04;
         for(int l=0; l<structure.allBranches.size(); l++){
             for(int i=0; i<structure.allBranches[l]->layers.size(); i++){
-                for(int j=0; j<structure.allBranches[l]->layers[i]->params.size; j++){
-                    structure.allBranches[l]->layers[i]->params.params[j] += epsilon;
+                for(int j=0; j<structure.allBranches[l]->layers[i]->params->size; j++){
+                    structure.allBranches[l]->layers[i]->params->params[j] += epsilon;
                     forwardPass();
                     double newLoss = getLoss();
-                    structure.allBranches[l]->layers[i]->params.params[j] -= epsilon;
+                    structure.allBranches[l]->layers[i]->params->params[j] -= epsilon;
                     double derivative = (newLoss - initLoss) / epsilon;
-                    assert(abs(derivative - structure.allBranches[l]->layers[i]->params.gradient[j]) < tol);
+                    assert(abs(derivative - structure.allBranches[l]->layers[i]->params->gradient[j]) < tol);
                 }
             }
         }

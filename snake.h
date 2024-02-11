@@ -36,7 +36,8 @@ using namespace std;
 #define boardx 10
 #define boardy 10
 // #define maxTime 1000
-#define maxTime 10
+#define maxTime 100
+// #define maxTime 10
 
 #define numAgentActions 4
 #define numChanceActions (boardx * boardy)
@@ -57,15 +58,15 @@ using namespace std;
 // training details
 
 #define maxStates (maxTime * 2 * numPaths)
-#define maxAgentQueue 15
+#define maxAgentQueue 10
 #define evalPeriod 1000
 #define numEvalGames 100
 
 #define scoreNorm LosePenalty
 
 #define numGames ((maxAgentQueue - 1) * evalPeriod)
-#define numPaths 200
-
+// #define numPaths 200
+#define numPaths 50
 
 // Passing Value or Full (or Policy)
 
@@ -75,7 +76,8 @@ using namespace std;
 
 // Multithreading
 
-#define NUM_THREADS 48
+// #define NUM_THREADS 40
+#define NUM_THREADS 10
 
 // Miscellaneous
 
@@ -520,21 +522,30 @@ public:
     
     Data(){}
     Data(Environment* givenEnv, double givenExpected);
-    void trainAgent(Agent& a);
+    // void trainAgent(LSTM::PVUnit& a);
 };
 
 class DataQueue{
 public:
-    Data* queue[queueSize];
-    int gameLengths[queueSize];
+    vector<Data> queue[queueSize];
     int index;
     int currSize, numFilled;
     double learnRate, momentum;
     
-    DataQueue();
-    void enqueue(Data* d, int gameLength);
-    void trainAgent(Agent& a);
+    DataQueue(){}
+    DataQueue(LSTM::PVUnit* structure);
+    void enqueue(vector<Data> d);
+
+    LSTM::PVUnit* units[maxTime*2];
+    void backPropRollout(LSTM::PVUnit& a, int rolloutIndex);
+    void trainAgent(LSTM::PVUnit& a);
     vector<int> readGames(string fileName);
+
+    ~DataQueue(){
+        for(int i=0; i<maxTime*2; i++){
+            delete units[i];
+        }
+    }
 };
 
 // Trainer
@@ -545,7 +556,7 @@ const int TRAIN_ADVERSARY = 1;
 const int TRAIN_MODE = 0;
 const int TEST_MODE = 1;
 
-void computeSoftmaxPolicy(double* logits, vector<int> validActions, double* policy); // -1 logit means invalid action.
+void computeSoftmaxPolicy(double* logits, int size, vector<int> validActions, double* policy); // -1 logit means invalid action.
 
 class MCTSModel{
 public:
@@ -559,15 +570,18 @@ public:
 
     // Activations of root node:
     // Note: must store both activations and parameters.
-    LSTM::PVUnit a;
+    LSTM::PVUnit* a;
+    LSTM::PVUnit* nextRoot;
 
-    // Activations along the path of the rollout:
-    vector<LSTM::PVUnit> pathActivations;
-    void initActivations(int depth);
+    // Store activations along the path of the rollout. currUnit activations plugged into nextUnit:
+    LSTM::PVUnit* currUnit;
+    LSTM::PVUnit* nextUnit;
     
     MCTSModel(){
         for(int i=0; i<maxStates; i++){
             outcomes[i] = NULL;
+            actionSums[i] = NULL;
+            actionCounts[i] = NULL;
         }
     }
     
@@ -610,17 +624,34 @@ public:
     void computeActionProbs();
     int optActionProbs();
     //int sampleActionProbs();
+
+    ~MCTSModel(){
+        delete a;
+        delete nextRoot;
+        delete currUnit;
+        delete nextUnit;
+        for(int i=0; i<maxStates; i++){
+            if(outcomes[i] != NULL){
+                delete[] outcomes[i];
+            }
+            if(actionSums[i] != NULL){
+                delete[] actionSums[i];
+            }
+            if(actionCounts[i] != NULL){
+                delete[] actionCounts[i];
+            }
+        }
+    }
 };
 
 class Trainer{
 public:
-    LSTM::PVUnit a;
+    LSTM::PVUnit* a;
 
     // test/train this agent against a competitor
-    LSTM::PVUnit competitor;
+    LSTM::PVUnit* competitor;
 
-    int output_gameLength;
-    Data* output_game;
+    vector<Data> output_game;
     double total_reward; // for the active player.
 
     double actionTemperature = 2;
@@ -637,13 +668,19 @@ public:
     Environment roots[maxTime*2];
     int rootIndices[maxTime*2];
 
-    Trainer(LSTM::PVUnit structure);
+    Trainer(){}
+    Trainer(LSTM::PVUnit* structure);
 
     void passParams();
 
     void trainGame(int mode);
 
     int getRandomChanceAction(Environment* e);
+
+    ~Trainer(){
+        delete a;
+        delete competitor;
+    }
 };
 
 #endif /* snake_h */

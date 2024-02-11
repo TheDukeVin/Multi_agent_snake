@@ -19,6 +19,7 @@ rsync -r kevindu@login.rc.fas.harvard.edu:./MultiagentSnake/LSTM/net.out LSTM
 #include <math.h>
 #include <thread>
 #include <cassert>
+#include <unordered_set>
 
 #ifndef lstm_h
 #define lstm_h
@@ -41,19 +42,27 @@ public:
 
     void resetGradient();
     void copy(Data* d);
+
+    ~Data(){
+        // cout << "Deleting data\n";
+        delete[] data;
+        delete[] gradient;
+    }
 };
 
 class Node{
 public:
-    Data* i1;
-    Data* i2;
-    Data* o;
+    Data* i1 = NULL;
+    Data* i2 = NULL;
+    Data* o = NULL;
 
     Node(){}
     Node(Data* i1_, Data* i2_, Data* o_);
 
     virtual void forwardPass() = 0;
     virtual void backwardPass() = 0;
+
+    virtual ~Node(){}
 };
 
 class ConcatNode : public Node{
@@ -147,6 +156,10 @@ public:
     PoolNode(Data* i1_, Data* o_, Shape input_, Shape output_);
     void forwardPass();
     void backwardPass();
+
+    ~PoolNode(){
+        delete maxIndices;
+    }
 };
 
 class Params{
@@ -158,22 +171,27 @@ public:
     Params(){}
     Params(int size_);
     void randomize(double scale);
-    void copy(Params params_);
-    void accumulateGradient(Params params_);
+    void copy(Params* params_);
+    void accumulateGradient(Params* params_);
     void update(double scale, double momentum, double regRate);
     void resetGradient();
+
+    ~Params(){
+        // cout << "Deleting params\n";
+        delete[] params;
+        delete[] gradient;
+    }
 };
 
 class Layer{
 protected:
-    vector<Data*> allHiddenData;
-    vector<Node*> allNodes;
-
     Data* addData(int size);
     void resetGradient();
     
 public:
-    Params params;
+    Params* params;
+    vector<Data*> allHiddenData;
+    vector<Node*> allNodes;
 
     int inputSize;
     int outputSize;
@@ -189,6 +207,11 @@ public:
     void copyAct(Layer* l);
 
     virtual void vf(){};
+
+    ~Layer(){
+        // cout << "Deleting layer\n";
+        delete params;
+    }
 };
 
 class LSTMLayer : public Layer{
@@ -258,7 +281,7 @@ public:
     void addOutput(int outputSize_);
 
     // Define an active Model unit from given structure
-    Model(Model structure, Model* prevModel, Data* input, Data* output);
+    Model(Model* structure, Model* prevModel, Data* input, Data* output);
 
     void copyParams(Model* m);
     void copyAct(Model* m);
@@ -273,11 +296,15 @@ public:
 
     void save(string fileOut);
     void load(string fileIn);
+
+    ~Model(){
+        // cout << "Deleting model\n";
+    }
 };
 
 class PVUnit{
 public:
-    Model* commonBranch;
+    Model* commonBranch = NULL;
     Model* policyBranch;
     Model* valueBranch;
     vector<Model*> allBranches;
@@ -293,7 +320,7 @@ public:
     void setupPV();
 
     // Then define new instances of the structure
-    PVUnit(PVUnit structure, PVUnit* prevUnit);
+    PVUnit(PVUnit* structure, PVUnit* prevUnit);
 
     void copyParams(PVUnit* unit);
     void copyAct(PVUnit* unit);
@@ -308,6 +335,34 @@ public:
 
     void save(string fileOut);
     void load(string fileIn);
+
+    ~PVUnit(){
+        cout << "Deleting PVUnit\n";
+        unordered_set<Data*> allData;
+        for(int i=0; i<allBranches.size(); i++){
+            Model* branch = allBranches[i];
+            // cout << "Iterating branch " << i << '\n';
+            for(int j=0; j<branch->layers.size(); j++){
+                Layer* layer = branch->layers[j];
+                // cout << "Iterating Layer " << j << '\n';
+                for(auto node : layer->allNodes){
+                    delete node;
+                }
+                for(auto data : layer->allHiddenData){
+                    allData.insert(data);
+                }
+                delete layer;
+            }
+            delete branch;
+        }
+        for(auto data : allData){
+            if(data != NULL){
+                // cout << data << '\n';
+                delete data;
+            }
+        }
+        cout << "Successfully deleted\n";
+    }
 };
 
 class ModelSeq{

@@ -8,16 +8,22 @@
 #include "snake.h"
 
 
-Trainer::Trainer(LSTM::PVUnit structure){
-    a = LSTM::PVUnit(structure, NULL);
-    competitor = LSTM::PVUnit(structure, NULL);
+Trainer::Trainer(LSTM::PVUnit* structure){
+    // cout << "Creating agent and competitor models\n";
+    a = new LSTM::PVUnit(structure, NULL);
+    competitor = new LSTM::PVUnit(structure, NULL);
+    // cout << "Creating MCTS submodels\n";
     for(int m=0; m<numAgents; m++){
-        models[m].a = LSTM::PVUnit(structure, NULL);
+        models[m].a = new LSTM::PVUnit(structure, NULL);
+        models[m].nextRoot = new LSTM::PVUnit(structure, models[m].a);
+        models[m].currUnit = new LSTM::PVUnit(structure, NULL);
+        models[m].nextUnit = new LSTM::PVUnit(structure, models[m].currUnit);
     }
+    // cout << "Successfully created trainer object\n";
 }
 
 void Trainer::trainGame(int mode){
-    // cout<<"TRAIN GAME\n";
+    cout << "NEW GAME\n";
     double search_values[maxTime*2];
     double search_policies[maxTime*2][numAgentActions];
     for(int i=0; i<maxTime*2; i++){
@@ -32,26 +38,38 @@ void Trainer::trainGame(int mode){
             }
         }
     }
+
+    // cout << "Initializing environment\n";
     
     roots[0].initialize();
+
+    // cout << "Passing parameters\n";
+
     passParams();
+
+    // cout << "Initializing MCTS models\n";
+
+    // initialize MCTS models
+
     for(int m=0; m<numAgents; m++){
-        // models[m].rootEnv = roots[0];
         models[m].rootIndex = 0;
         models[m].initializeNode(roots[0], 0);
-        models[m].evaluateEnv(roots[0], 0, &models[m].a);
+        models[m].evaluateEnv(roots[0], 0, models[m].a);
         models[m].index = 1;
     }
+
     valueOutput = to_string(roots[0].apple.x * boardy + roots[0].apple.y) + ' ';
     
     // In the multiagent case, chosenAction reflects the actions of ALL players.
     Action chosenAction;
 
+    // Simulate rollout:
+
     int r;
     for(r=0; r<maxTime*2; r++){
         // cout << "Rollout set " << r << '\n';
         // cout << roots[r].toString() << '\n';
-        
+
         // roots[r].log("games.out");
         rootIndices[r] = models[TRAIN_ACTIVE].rootIndex;
         for(int m=0; m<numAgents; m++){
@@ -76,7 +94,7 @@ void Trainer::trainGame(int mode){
             }
             for(int m=0; m<numAgents; m++){
                 for(int i=0; i<numAgentActions; i++){
-                    assert(roots[r].validAgentAction(m, i) == (models[m].actionProbs[i] != -1));
+                    assert(roots[r].validAgentAction(m, i) == (models[m].actionProbs[i] >= 0));
                 }
             }
             for(int j=0; j<numAgentActions; j++){
@@ -98,6 +116,7 @@ void Trainer::trainGame(int mode){
             // roots[r+1] = roots[r];
             // roots[r+1].chanceAction(chosenAction);
         }
+        // cout << "Found action\n";
         roots[r+1] = roots[r];
         roots[r+1].makeAction(chosenAction);
 
@@ -108,6 +127,7 @@ void Trainer::trainGame(int mode){
         else{
             search_values[r] = 0;
         }
+        // cout << "Simulating action in submodel\n";
 
         for(int m=0; m<numAgents; m++){
             models[m].simulateAction(roots[r+1], chosenAction);
@@ -119,10 +139,8 @@ void Trainer::trainGame(int mode){
         }
     }
     valueOutput += "\n";
-
-    /*
+    
     int numStates = r + 2;
-    Data* game = new Data[numStates];
 
     total_reward = 0;
     for(int i=0; i<numStates; i++){
@@ -132,8 +150,9 @@ void Trainer::trainGame(int mode){
 
     roots[numStates-1].computeRewards();
     double value = roots[numStates-1].rewards[TRAIN_ACTIVE];
+    output_game = vector<Data>();
     for(int i=numStates-1; i>=0; i--){
-        game[i] = Data(&roots[i], value);
+        output_game.push_back(Data(&roots[i], value));
         if(i > 0){
             roots[i-1].computeRewards();
             value = roots[i-1].rewards[TRAIN_ACTIVE] + value * pow(discountFactor, roots[i].timer - roots[i-1].timer);
@@ -141,16 +160,17 @@ void Trainer::trainGame(int mode){
     }
     for(int i=0; i<numStates; i++){
         for(int j=0; j<numAgentActions; j++){
-            game[i].expectedPolicy[j] = search_policies[i][j];
+            output_game[i].expectedPolicy[j] = search_policies[i][j];
         }
     }
-    //dq->enqueue(game, numStates);
-    output_gameLength = numStates;
-    output_game = game;
+
+    if(mode == TEST_MODE){
+        return;
+    }
 
     // Log true value
     for(int i=0; i<numStates; i++){
-        valueOutput += to_string(game[i].expectedValue) + ' ';
+        valueOutput += to_string(output_game[i].expectedValue) + ' ';
     }
     valueOutput += "\n";
 
@@ -161,7 +181,7 @@ void Trainer::trainGame(int mode){
     valueOutput += "\n";
 
     // Log search value
-    search_values[numStates - 1] = game[numStates - 1].e.rewards[TRAIN_ACTIVE];
+    search_values[numStates - 1] = output_game[numStates - 1].e.rewards[TRAIN_ACTIVE];
     for(int i=0; i<numStates; i++){
         valueOutput += to_string(search_values[i]);
         if(i != numStates-1) valueOutput += ' ';
@@ -185,7 +205,6 @@ void Trainer::trainGame(int mode){
     valueOutput += "\n";
 //
 //    return &roots[numStates-1];
-*/
 }
 
 int Trainer::getRandomChanceAction(Environment* e){
@@ -211,10 +230,10 @@ void Trainer::passParams(){
         models[m].actionTemperature = actionTemperature;
         models[m].cUCB = cUCB;
     }
-    models[TRAIN_ACTIVE].a.copyParams(&a);
-    models[TRAIN_ACTIVE].a.copyAct(&a);
-    models[TRAIN_ADVERSARY].a.copyParams(&competitor);
-    models[TRAIN_ADVERSARY].a.copyAct(&competitor);
+    models[TRAIN_ACTIVE].a->copyParams(a);
+    models[TRAIN_ACTIVE].a->copyAct(a);
+    models[TRAIN_ADVERSARY].a->copyParams(competitor);
+    models[TRAIN_ADVERSARY].a->copyAct(competitor);
     // models[TRAIN_ACTIVE].a = a;
     // models[TRAIN_ADVERSARY].a = competitor;
 }

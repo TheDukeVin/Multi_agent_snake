@@ -18,16 +18,18 @@ void Params::randomize(double scale){
     }
 }
 
-void Params::copy(Params params_){
+void Params::copy(Params* params_){
+    // cout << "Copy params " << params << ' ' << gradient << '\n';
     for(int i=0; i<size; i++){
-        params[i] = params_.params[i];
-        gradient[i] = params_.gradient[i];
+        params[i] = params_->params[i];
+        gradient[i] = params_->gradient[i];
     }
+    // cout << "Copied\n";
 }
 
-void Params::accumulateGradient(Params params_){
+void Params::accumulateGradient(Params* params_){
     for(int i=0; i<size; i++){
-        gradient[i] += params_.gradient[i];
+        gradient[i] += params_->gradient[i];
     }
 }
 

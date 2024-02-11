@@ -17,7 +17,7 @@ LSTMLayer::LSTMLayer(Data* input_, Data* output_, LSTMLayer* prevUnit){
     output = output_;
     inputSize = input->size;
     outputSize = output->size;
-    params = Params(4 * ((inputSize + outputSize + 1) * outputSize));
+    params = new Params(4 * ((inputSize + outputSize + 1) * outputSize));
     if(prevUnit == NULL){
         prevUnit = new LSTMLayer(outputSize);
     }
@@ -34,10 +34,10 @@ LSTMLayer::LSTMLayer(Data* input_, Data* output_, LSTMLayer* prevUnit){
     Data* bias[4];
     vector<Data*> linComb;
     for(int i=0; i<4; i++){
-        weights[i] = new Data(weightSize, params.params + (weightSize + biasSize)*i,
-                                          params.gradient + (weightSize + biasSize)*i);
-        bias[i] = new Data(biasSize, params.params + (weightSize + biasSize)*i + weightSize,
-                                     params.gradient + (weightSize + biasSize)*i + weightSize);
+        weights[i] = new Data(weightSize, params->params + (weightSize + biasSize)*i,
+                                          params->gradient + (weightSize + biasSize)*i);
+        bias[i] = new Data(biasSize, params->params + (weightSize + biasSize)*i + weightSize,
+                                     params->gradient + (weightSize + biasSize)*i + weightSize);
         Data* mult_result = addData(outputSize);
         allNodes.push_back(new MatMulNode(weights[i], XH, mult_result));
         Data* sum_result = addData(outputSize);

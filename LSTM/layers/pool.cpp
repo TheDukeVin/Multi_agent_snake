@@ -11,6 +11,6 @@ PoolLayer::PoolLayer(Data* input_, Data* output_, Shape inputShape_, Shape outpu
     inputSize = inputShape.getSize();
     outputSize = outputShape.getSize();
 
-    params = Params(0);
+    params = new Params(0);
     allNodes.push_back(new PoolNode(input, output, inputShape, outputShape));
 }

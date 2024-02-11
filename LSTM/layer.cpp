@@ -28,7 +28,7 @@ void Layer::resetGradient(){
     for(int i=0; i<allHiddenData.size(); i++){
         allHiddenData[i]->resetGradient();
     }
-    params.resetGradient();
+    params->resetGradient();
 }
 
 void Layer::copyAct(Layer* l){

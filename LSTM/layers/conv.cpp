@@ -16,8 +16,8 @@ ConvLayer::ConvLayer(Data* input_, Data* output_, Shape inputShape_, Shape outpu
     int weightSize = inputShape.depth * outputShape.depth * convH * convW;
     int biasSize = outputShape.depth;
 
-    params = Params(weightSize + biasSize);
-    Data* weights = new Data(weightSize, params.params, params.gradient);
-    Data* bias = new Data(biasSize, params.params + weightSize, params.gradient + weightSize);
+    params = new Params(weightSize + biasSize);
+    Data* weights = new Data(weightSize, params->params, params->gradient);
+    Data* bias = new Data(biasSize, params->params + weightSize, params->gradient + weightSize);
     allNodes.push_back(new ConvNode(input, weights, bias, output, inputShape, outputShape, convH, convW));
 }
