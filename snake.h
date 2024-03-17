@@ -51,16 +51,24 @@ using namespace std;
 
 #define maxNorm 100
 #define batchSize 100
-#define numBatches 30
+#define numBatches 600
+// #define numBatches 20
 
 #define queueSize 10000
 
 // training details
 
 #define maxStates (maxTime * 2 * numPaths)
-#define maxAgentQueue 10
+#define maxAgentQueue 5
 #define evalPeriod 1000
+#define trainPeriod 200
+#define numRolloutsPerThread 10
 #define numEvalGames 100
+// #define maxAgentQueue 11
+// #define evalPeriod 1
+// #define trainPeriod 10
+// #define numRolloutsPerThread 1
+// #define numEvalGames 1
 
 #define scoreNorm LosePenalty
 
@@ -77,7 +85,8 @@ using namespace std;
 // Multithreading
 
 // #define NUM_THREADS 40
-#define NUM_THREADS 10
+#define NUM_THREADS 20
+// #define NUM_THREADS 1
 
 // Miscellaneous
 
@@ -537,8 +546,11 @@ public:
     void enqueue(vector<Data> d);
 
     LSTM::PVUnit* units[maxTime*2];
+
+    double valueLoss;
+    double policyLoss;
     void backPropRollout(LSTM::PVUnit& a, int rolloutIndex);
-    void trainAgent(LSTM::PVUnit& a);
+    void trainAgent(LSTM::PVUnit& a, string outFile);
     vector<int> readGames(string fileName);
 
     ~DataQueue(){
@@ -641,6 +653,18 @@ public:
                 delete[] actionCounts[i];
             }
         }
+    }
+};
+
+class OutputGameDetails{
+public:
+    vector<Data> game;
+    double total_reward; // for the active player.
+
+    OutputGameDetails(){}
+    OutputGameDetails(vector<Data> g, double rew){
+        game = g;
+        total_reward = rew;
     }
 };
 

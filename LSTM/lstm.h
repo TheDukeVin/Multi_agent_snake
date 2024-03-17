@@ -164,9 +164,18 @@ public:
 
 class Params{
 public:
+    const static double constexpr beta_1 = 0.9;
+    const static double constexpr beta_2 = 0.999;
+    const static double constexpr epsilon = 1e-08;
+
     int size;
     double* params;
     double* gradient;
+
+    // For Adam optimization
+    double* first_moment;
+    double* second_moment;
+    long numUpdates;
 
     Params(){}
     Params(int size_);
@@ -180,6 +189,8 @@ public:
         // cout << "Deleting params\n";
         delete[] params;
         delete[] gradient;
+        delete[] first_moment;
+        delete[] second_moment;
     }
 };
 

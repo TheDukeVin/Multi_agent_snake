@@ -151,8 +151,11 @@ void Trainer::trainGame(int mode){
     roots[numStates-1].computeRewards();
     double value = roots[numStates-1].rewards[TRAIN_ACTIVE];
     output_game = vector<Data>();
+    for(int i=0; i<numStates; i++){
+        output_game.push_back(Data());
+    }
     for(int i=numStates-1; i>=0; i--){
-        output_game.push_back(Data(&roots[i], value));
+        output_game[i] = Data(&roots[i], value);
         if(i > 0){
             roots[i-1].computeRewards();
             value = roots[i-1].rewards[TRAIN_ACTIVE] + value * pow(discountFactor, roots[i].timer - roots[i-1].timer);

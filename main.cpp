@@ -111,8 +111,74 @@ void printArray(double* A, int size){
 //     }
 // }
 
-void runThread(Trainer* t){
-    t->trainGame(TRAIN_MODE);
+OutputGameDetails gameStore[NUM_THREADS][numRolloutsPerThread];
+
+void runThread(int trainerIndex){
+    for(int i=0; i<numRolloutsPerThread; i++){
+        trainers[trainerIndex]->trainGame(TRAIN_MODE);
+        gameStore[trainerIndex][i] = OutputGameDetails(trainers[trainerIndex]->output_game, trainers[trainerIndex]->total_reward);
+    }
+}
+
+void evaluateAgent(int tournament_size, LSTM::PVUnit* a, string controlLog){
+    ofstream controlOut(controlLog, ios::app);
+
+    for(int t=0; t<tournament_size; t++){
+        testing_ground->a->copyParams(a);
+        testing_ground->competitor->copyParams(opponents[t]);
+        testing_ground->passParams();
+        double sum = 0;
+        controlOut<<"Testing agent " << t << " and agent "<<tournament_size<<'\n';
+        int symFactor = 1;
+        for(int it=0; it<numEvalGames; it++){
+            if(it == numEvalGames / 2){
+                // swap two agents, if environment is not symmetric.
+                testing_ground->a->copyParams(opponents[t]);
+                testing_ground->competitor->copyParams(a);
+                symFactor = -1;
+            }
+            testing_ground->trainGame(TEST_MODE);
+            controlOut << testing_ground->total_reward * symFactor << ' ';
+            sum += testing_ground->total_reward / scoreNorm * symFactor;
+        }
+        controlOut << '\n';
+        tournament[t][tournament_size] = sum / numEvalGames;
+    }
+
+    
+}
+
+void computeOracle(int tournament_size, string controlLog){
+    ofstream controlOut(controlLog, ios::app);
+    Nash NE(tournament_size, tournament_size);
+    for(int i_=0; i_<tournament_size; i_++){
+        for(int j_=i_+1; j_<tournament_size; j_++){
+            NE.A[i_][j_] = tournament[i_][j_];
+            NE.A[j_][i_] = -tournament[i_][j_];
+        }
+        NE.A[i_][i_] = 0;
+    }
+    NE.find_equilibrium(1e+08, 1e-05);
+
+    controlOut << "Tournament matrix: \n";
+    for(int k=0; k<tournament_size; k++){
+        for(int l=0; l<tournament_size; l++){
+            controlOut << NE.A[k][l] << ' ';
+        }
+        controlOut << '\n';
+    }
+
+    controlOut << "Equilibrium: \n";
+    for(int k=0; k<tournament_size; k++){
+        controlOut << NE.p1[k] << ' ';
+    }
+    controlOut<<'\n';
+    controlOut << "EXPLOITABILITY: " << NE.exploitabilty() << '\n';
+
+    for(int k=0; k<tournament_size; k++){
+        nashDist[k] = NE.p1[k];
+    }
+    controlOut.close();
 }
 
 void trainCycle(){
@@ -135,14 +201,14 @@ void trainCycle(){
     LSTM::PVUnit structure;
     structure.commonBranch = new LSTM::Model(LSTM::Shape(10, 10, 13));
     structure.commonBranch->addConv(LSTM::Shape(10, 10, 10), 3, 3);
-    structure.commonBranch->addConv(LSTM::Shape(10, 10, 15), 3, 3);
-    structure.commonBranch->addPool(LSTM::Shape(5, 5, 15));
+    structure.commonBranch->addConv(LSTM::Shape(10, 10, 10), 3, 3);
+    structure.commonBranch->addPool(LSTM::Shape(5, 5, 10));
     structure.initPV();
-    structure.policyBranch->addLSTM(100);
     structure.policyBranch->addLSTM(50);
+    structure.policyBranch->addLSTM(25);
     structure.policyBranch->addOutput(4);
-    structure.valueBranch->addLSTM(100);
     structure.valueBranch->addLSTM(50);
+    structure.valueBranch->addLSTM(25);
     structure.valueBranch->addOutput(1);
     structure.randomize(0.1);
 
@@ -184,7 +250,7 @@ void trainCycle(){
     dq->index = 0;
     dq->currSize = 2000;
     dq->momentum = 0.7;
-    dq->learnRate = 0.01;
+    dq->learnRate = 0.001;
     double explorationConstant = 0.5;
     
     //cout<<"Reading games\n";
@@ -228,42 +294,36 @@ void trainCycle(){
             int advIndex = sampleDist(nashDist, tournament_size);
             trainers[j]->competitor->copyParams(opponents[advIndex]);
             trainers[j]->passParams();
-            // {
-            //     ofstream controlOut(controlLog, ios::app);
-            //     controlOut << "Dispatching thread " << j << '\n';
-            //     controlOut.close();
-            // }
 
-            threads[j] = new thread(runThread, trainers[j]);
+            threads[j] = new thread(runThread, j);
         }
         for(int j=0; j<NUM_THREADS; j++){
-            // {
-            //     ofstream controlOut(controlLog, ios::app);
-            //     controlOut << "Joining thread " << j << '\n';
-            //     controlOut.close();
-            // }
             threads[j]->join();
-            dq->enqueue(trainers[j]->output_game);
         }
 
-        for(int j=0; j<NUM_THREADS; j++){
-            // cout << "Game " << i << '\n';
+        for(int j=0; j<NUM_THREADS*numRolloutsPerThread; j++){
+            int trainerIndex = j / numRolloutsPerThread;
+            int gameIndex = j % numRolloutsPerThread;
+            vector<Data> game = gameStore[trainerIndex][gameIndex].game;
+            double total_reward = gameStore[trainerIndex][gameIndex].total_reward;
+
+            dq->enqueue(game);
             // Log games.
             ofstream gameOut(gameLog, ios::app);
             gameOut<<"Game "<<i<<":\n";
             gameOut.close();
-            for(int t=0; t<trainers[j]->output_game.size(); t++){
-                trainers[j]->output_game[t].e.log(gameLog);
+            for(int t=0; t<game.size(); t++){
+                game[t].e.log(gameLog);
             }
 
-            ofstream valueOut(valueLog, ios::app);
-            valueOut<<"Game "<<i<<' '<<time(NULL)<<'\n';
-            valueOut<<trainers[j]->valueOutput;
-            valueOut.close();
+            // ofstream valueOut(valueLog, ios::app);
+            // valueOut<<"Game "<<i<<' '<<time(NULL)<<'\n';
+            // valueOut<<trainers[j]->valueOutput;
+            // valueOut.close();
 
             // get cumulative rewards
-            double score = trainers[j]->total_reward;
-            Environment* result = &(trainers[j]->output_game[trainers[j]->output_game.size()-1].e);
+            double score = total_reward;
+            Environment* result = &(game[game.size()-1].e);
             // double score = result->snakes[0].size - result->snakes[1].size;
             sum += score;
             
@@ -285,76 +345,26 @@ void trainCycle(){
 
             // add an adversary
             if(i>0 && i%evalPeriod == 0){
-                ofstream controlOut(controlLog, ios::app);
-                controlOut << "Game "<<i<<'\n';
-
-                for(int t=0; t<tournament_size; t++){
-                    testing_ground->a->copyParams(&a);
-                    testing_ground->competitor->copyParams(opponents[t]);
-                    testing_ground->passParams();
-                    double sum = 0;
-                    controlOut<<"Testing agent " << t << " and agent "<<tournament_size<<'\n';
-                    int symFactor = 1;
-                    for(int it=0; it<numEvalGames; it++){
-                        if(it == numEvalGames / 2){
-                            // swap two agents, if environment is not symmetric.
-                            testing_ground->a->copyParams(opponents[t]);
-                            testing_ground->competitor->copyParams(&a);
-                            symFactor = -1;
-                        }
-                        testing_ground->trainGame(TEST_MODE);
-                        controlOut << testing_ground->total_reward * symFactor << ' ';
-                        sum += testing_ground->total_reward / scoreNorm * symFactor;
-                    }
-                    controlOut << '\n';
-                    tournament[t][tournament_size] = sum / numEvalGames;
-                }
+                evaluateAgent(tournament_size, &a, controlLog);
                 opponents[tournament_size]->copyParams(&a);
                 tournament_size ++;
+                computeOracle(tournament_size, controlLog);
+            }
+            
+            if(i>0 && i%trainPeriod == 0){
+                cout << "Training\n";
+                dq->trainAgent(a, "training" + to_string(i) + ".out");
+                cout << "Done training\n";
+            }
+            i++;
 
-                Nash NE(tournament_size, tournament_size);
-                for(int i_=0; i_<tournament_size; i_++){
-                    for(int j_=i_+1; j_<tournament_size; j_++){
-                        NE.A[i_][j_] = tournament[i_][j_];
-                        NE.A[j_][i_] = -tournament[i_][j_];
-                    }
-                    NE.A[i_][i_] = 0;
-                }
-                NE.find_equilibrium(1e+08, 1e-05);
-
-                controlOut << "Tournament matrix: \n";
-                for(int k=0; k<tournament_size; k++){
-                    for(int l=0; l<tournament_size; l++){
-                        controlOut << NE.A[k][l] << ' ';
-                    }
-                    controlOut << '\n';
-                }
-
-                controlOut << "Equilibrium: \n";
-                for(int k=0; k<tournament_size; k++){
-                    controlOut << NE.p1[k] << ' ';
-                }
-                controlOut<<'\n';
-                controlOut << "EXPLOITABILITY: " << NE.exploitabilty() << '\n';
-
-                for(int k=0; k<tournament_size; k++){
-                    nashDist[k] = NE.p1[k];
-                }
-
-                // Schedule
-                if(i > 5000){
-                    dq->currSize = max(10000, dq->currSize);
-                    controlOut << "Game queue size set to "<<dq->currSize<<'\n';
-                }
+            // Schedule
+            if(i > 5000){
+                dq->currSize = max(10000, dq->currSize);
+                ofstream controlOut(controlLog, ios::app);
+                controlOut << "Game queue size set to "<<dq->currSize<<'\n';
                 controlOut.close();
             }
-
-            // if(i % storePeriod == 0){
-            //     a.save("nets/Game" + to_string(i) + ".out");
-            // }
-            
-            dq->trainAgent(a);
-            i++;
         }
     }
 }

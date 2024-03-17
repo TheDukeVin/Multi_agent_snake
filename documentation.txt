@@ -131,8 +131,11 @@ Testing initial multiagent setting
 
 g++ -O2 -std=c++11 -pthread main.cpp environment.cpp convNet.cpp InputLayerCode.cpp
 
-rsync -r multiagent_snake kevindu@login.rc.fas.harvard.edu:./MultiagentSnake
-rsync -r kevindu@login.rc.fas.harvard.edu:./MultiagentSnake/multiagent_snake .
+rsync -r multiagent_snake kevindu@login.rc.fas.harvard.edu:./MultiagentSnake --exclude .git/
+rsync -r kevindu@login.rc.fas.harvard.edu:./MultiagentSnake/multiagent_snake . --exclude .git/
+
+If not working use to diagnose:
+--progress
 
 2/5/23
 
@@ -182,7 +185,7 @@ zsh: abort      ./a.out
 
 g++ -O2 -std=c++11 -pthread main.cpp data.cpp environment.cpp trainer.cpp common.cpp nash.cpp MCTS.cpp kmeans.cpp convNet.cpp InputLayerCode.cpp -I "./LSTM" LSTM/model.cpp LSTM/PVUnit.cpp LSTM/layer.cpp LSTM/layers/lstmlayer.cpp LSTM/layers/policy.cpp LSTM/layers/conv.cpp LSTM/layers/pool.cpp LSTM/params.cpp LSTM/node.cpp && sbatch snake.slurm
 
-g++ -O2 -std=c++11 -pthread  main.cpp data.cpp environment.cpp trainer.cpp common.cpp nash.cpp MCTS.cpp kmeans.cpp convNet.cpp InputLayerCode.cpp -I "./LSTM" LSTM/model.cpp LSTM/PVUnit.cpp LSTM/layer.cpp LSTM/layers/lstmlayer.cpp LSTM/layers/policy.cpp LSTM/layers/conv.cpp LSTM/layers/pool.cpp LSTM/params.cpp LSTM/node.cpp && ./a.out
+g++ -O2 -std=c++11 -pthread main.cpp data.cpp environment.cpp trainer.cpp common.cpp nash.cpp MCTS.cpp kmeans.cpp convNet.cpp InputLayerCode.cpp -I "./LSTM" LSTM/model.cpp LSTM/PVUnit.cpp LSTM/layer.cpp LSTM/layers/lstmlayer.cpp LSTM/layers/policy.cpp LSTM/layers/conv.cpp LSTM/layers/pool.cpp LSTM/params.cpp LSTM/node.cpp && ./a.out
 
 -fsanitize=address -fsanitize=undefined -fno-sanitize-recover=all -fsanitize=float-divide-by-zero -fsanitize=float-cast-overflow -fno-sanitize=null -fno-sanitize=alignment
 
@@ -195,3 +198,9 @@ Slurm command:
 When running at one thread, each game takes ~80s to run.
 When running two threads, Thread 1 takes ~90s. Thread 2 takes an additional ~20s.
 When running 10 threads, Thread 1 takes ~110s. Each additional thread takes ~20s.
+
+2/11/24
+
+Syncing particular files
+
+rsync kevindu@login.rc.fas.harvard.edu:./MultiagentSnake/multiagent_snake/training200.out .

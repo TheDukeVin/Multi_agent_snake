@@ -60,6 +60,10 @@ double UnitaryNode::nonlinear(double x){
         if(x < 0) return 0;
         return x;
     }
+    if(operation == "leakyRelu"){
+        if(x < 0) return 0.1*x;
+        return x;
+    }
     assert(false);
 }
 
@@ -77,6 +81,10 @@ double UnitaryNode::dnonlinear(double x){
     }
     if(operation == "relu"){
         if(x < 0) return 0;
+        return 1;
+    }
+    if(operation == "leakyRelu"){
+        if(x < 0) return 0.1;
         return 1;
     }
     assert(false);

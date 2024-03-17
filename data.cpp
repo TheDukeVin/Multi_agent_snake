@@ -39,6 +39,7 @@ void DataQueue::enqueue(vector<Data> d){
 
 void DataQueue::backPropRollout(LSTM::PVUnit& a, int rolloutIndex){
     double policy[2*maxTime][numAgentActions];
+    valueLoss = policyLoss = 0;
     for(int i=0; i<queue[rolloutIndex].size(); i++){
         units[i]->copyParams(&a);
         int symID = 0;
@@ -47,33 +48,67 @@ void DataQueue::backPropRollout(LSTM::PVUnit& a, int rolloutIndex){
         units[i]->forwardPass();
         computeSoftmaxPolicy(units[i]->policyOutput->data, numAgentActions, env.validAgentActions(TRAIN_ACTIVE), policy[i]);
     }
+    // ofstream dataOut("data.out", ios::app);
     for(int i=queue[rolloutIndex].size()-1; i>=0; i--){
         for(int j=0; j<a.policyBranch->outputSize; j++){
             units[i]->policyOutput->gradient[j] = 0;
         }
         Environment env = queue[rolloutIndex][i].e;
+        // dataOut << env.toString() << '\n';
         if(!env.isEndState() && env.actionType == 0){
             for(auto a : env.validAgentActions(TRAIN_ACTIVE)){
                 units[i]->policyOutput->gradient[a] = policy[i][a] - queue[rolloutIndex][i].expectedPolicy[a];
+                // dataOut << "Policy: " << policy[i][a] << ' ' << queue[rolloutIndex][i].expectedPolicy[a] << '\n';
+                policyLoss -= queue[rolloutIndex][i].expectedPolicy[a] * log(policy[i][a]);
             }
         }
         units[i]->valueOutput->gradient[0] = units[i]->valueOutput->data[0] - queue[rolloutIndex][i].expectedValue;
         units[i]->backwardPass();
+        // dataOut << "Value: " << units[i]->valueOutput->data[0] << ' ' << queue[rolloutIndex][i].expectedValue << '\n';
         a.accumulateGradient(units[i]);
+        valueLoss += pow(units[i]->valueOutput->gradient[0], 2);
     }
 }
 
-void DataQueue::trainAgent(LSTM::PVUnit& a){
+void DataQueue::trainAgent(LSTM::PVUnit& a, string outFile){
     int i,j;
+    string valueLossOut;
+    string policyLossOut;
+    string normOut;
     for(i=0; i<numBatches; i++){
         backPropRollout(a, rand() % numFilled);
+        a.updateParams(learnRate / maxTime, momentum, 0.0001);
+
+        // Track norm of gradients
+        // double gradNorm = 0;
+        // for(int j=0; j<a.allBranches.size(); j++){
+        //     for(int k=0; k<a.allBranches[j]->layers.size(); k++){
+        //         for(int l=0; l<a.allBranches[j]->layers[k]->params->size; l++){
+        //             gradNorm += pow(a.allBranches[j]->layers[k]->params->gradient[l], 2);
+        //         }
+        //     }
+        // }
+
+        // if(i > 0){
+        //     valueLossOut += ",";
+        //     policyLossOut += ",";
+        //     normOut += ",";
+        // }
+        // valueLossOut += to_string(valueLoss);
+        // policyLossOut += to_string(policyLoss);
+        // normOut += to_string(gradNorm);
+
         // for(j=0; j<batchSize; j++){
         //     int gameIndex = rand() % numFilled;
         //     queue[gameIndex][rand() % gameLengths[gameIndex]].trainAgent(a);
         // }
         // a.updateParameters(learnRate / batchSize, momentum);
     }
-    a.updateParams(learnRate / numBatches / maxTime, momentum, 0);
+    ofstream fout(outFile);
+    fout << valueLossOut << '\n';
+    fout << policyLossOut << '\n';
+    fout << normOut << '\n';
+    fout.close();
 }
 
 vector<int> DataQueue::readGames(string fileName){

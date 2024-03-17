@@ -22,7 +22,7 @@ void Dense::setupLayer(Data* input_, Data* output_, string operation){
 }
 
 Dense::Dense(Data* input_, Data* output_){
-    setupLayer(input_, output_, "sigmoid");
+    setupLayer(input_, output_, "leakyRelu");
 }
 
 PolicyOutput::PolicyOutput(Data* input_, Data* output_){
