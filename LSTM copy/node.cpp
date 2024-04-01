@@ -243,12 +243,12 @@ void ConvNode::backwardPass(){
 }
 
 double ConvNode::nonlinear(double x){
-    if(x < 0) return x*0.1;
+    if(x < 0) return 0;
     return x;
 }
 
 double ConvNode::dinvnonlinear(double x){
-    if(x < 0) return 0.1;
+    if(x < 1e-15) return 0;
     return 1;
 }
 

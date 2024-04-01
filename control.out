@@ -1,4 +1,4 @@
-Training control: 1710702585
+Training control: 1710794254
 Testing agent 0 and agent 1
 -0 
 Tournament matrix: 
@@ -19,38 +19,38 @@ Equilibrium:
 0.333333 0.333333 0.333333 
 EXPLOITABILITY: 0
 Testing agent 0 and agent 3
--0 
+1 
 Testing agent 1 and agent 3
--0 
+1 
 Testing agent 2 and agent 3
 -0 
 Tournament matrix: 
-0 0 0 0 
--0 0 0 0 
+0 0 0 0.2 
+-0 0 0 0.2 
 -0 -0 0 0 
--0 -0 -0 0 
+-0.2 -0.2 -0 0 
 Equilibrium: 
-0.25 0.25 0.25 0.25 
-EXPLOITABILITY: 0
+4.82933e-06 4.82933e-06 0.254975 0.745015 
+EXPLOITABILITY: 3.86346e-06
 Testing agent 0 and agent 4
 -0 
 Testing agent 1 and agent 4
 -0 
 Testing agent 2 and agent 4
--0 
+1 
 Testing agent 3 and agent 4
 -0 
 Tournament matrix: 
-0 0 0 0 0 
--0 0 0 0 0 
--0 -0 0 0 0 
--0 -0 -0 0 0 
--0 -0 -0 -0 0 
+0 0 0 0.2 0 
+-0 0 0 0.2 0 
+-0 -0 0 0 0.2 
+-0.2 -0.2 -0 0 0 
+-0 -0 -0.2 -0 0 
 Equilibrium: 
-0.2 0.2 0.2 0.2 0.2 
-EXPLOITABILITY: 0
+1.05285e-07 1.05285e-07 1.1439e-05 0.597476 0.402512 
+EXPLOITABILITY: 4.57562e-06
 Testing agent 0 and agent 5
--1 
+-0 
 Testing agent 1 and agent 5
 1 
 Testing agent 2 and agent 5
@@ -60,38 +60,38 @@ Testing agent 3 and agent 5
 Testing agent 4 and agent 5
 -0 
 Tournament matrix: 
-0 0 0 0 0 -0.2 
--0 0 0 0 0 0.2 
--0 -0 0 0 0 0 
--0 -0 -0 0 0 0 
--0 -0 -0 -0 0 0 
-0.2 -0.2 -0 -0 -0 0 
+0 0 0 0.2 0 0 
+-0 0 0 0.2 0 0.2 
+-0 -0 0 0 0.2 0 
+-0.2 -0.2 -0 0 0 0 
+-0 -0 -0.2 -0 0 0 
+-0 -0.2 -0 -0 -0 0 
 Equilibrium: 
-0.433255 0.0646495 0.167361 0.167361 0.167361 1.25912e-05 
-EXPLOITABILITY: 5.03648e-06
+1.05069e-06 8.95031e-10 1.45714e-05 0.425092 0.334485 0.240407 
+EXPLOITABILITY: 5.82857e-06
 Testing agent 0 and agent 6
 -0 
 Testing agent 1 and agent 6
--0 
+-1 
 Testing agent 2 and agent 6
 -0 
 Testing agent 3 and agent 6
 -0 
 Testing agent 4 and agent 6
--0 
-Testing agent 5 and agent 6
 -1 
+Testing agent 5 and agent 6
+-0 
 Tournament matrix: 
-0 0 0 0 0 -0.2 0 
--0 0 0 0 0 0.2 0 
--0 -0 0 0 0 0 0 
--0 -0 -0 0 0 0 0 
--0 -0 -0 -0 0 0 0 
-0.2 -0.2 -0 -0 -0 0 -0.2 
--0 -0 -0 -0 -0 0.2 0 
+0 0 0 0.2 0 0 0 
+-0 0 0 0.2 0 0.2 -0.2 
+-0 -0 0 0 0.2 0 0 
+-0.2 -0.2 -0 0 0 0 0 
+-0 -0 -0.2 -0 0 0 -0.2 
+-0 -0.2 -0 -0 -0 0 0 
+-0 0.2 -0 -0 0.2 -0 0 
 Equilibrium: 
-0.483503 0.042704 0.143692 0.143692 0.143692 1.18871e-05 0.042704 
-EXPLOITABILITY: 4.75482e-06
+1.47274e-05 8.84055e-08 1.33291e-05 0.385304 0.393592 0.221067 8.72951e-06 
+EXPLOITABILITY: 8.82345e-06
 Testing agent 0 and agent 7
 -0 
 Testing agent 1 and agent 7
@@ -107,17 +107,17 @@ Testing agent 5 and agent 7
 Testing agent 6 and agent 7
 -0 
 Tournament matrix: 
-0 0 0 0 0 -0.2 0 0 
--0 0 0 0 0 0.2 0 0 
--0 -0 0 0 0 0 0 0 
--0 -0 -0 0 0 0 0 0 
--0 -0 -0 -0 0 0 0 0 
-0.2 -0.2 -0 -0 -0 0 -0.2 0 
--0 -0 -0 -0 -0 0.2 0 0 
+0 0 0 0.2 0 0 0 0 
+-0 0 0 0.2 0 0.2 -0.2 0 
+-0 -0 0 0 0.2 0 0 0 
+-0.2 -0.2 -0 0 0 0 0 0 
+-0 -0 -0.2 -0 0 0 -0.2 0 
+-0 -0.2 -0 -0 -0 0 0 0 
+-0 0.2 -0 -0 0.2 -0 0 0 
 -0 -0 -0 -0 -0 -0 -0 0 
 Equilibrium: 
-0.423236 0.0372497 0.12556 0.12556 0.12556 2.28899e-05 0.0372497 0.12556 
-EXPLOITABILITY: 9.15597e-06
+1.18126e-05 6.78772e-08 1.07099e-05 0.336761 0.343871 0.193052 7.00596e-06 0.126286 
+EXPLOITABILITY: 7.08634e-06
 Testing agent 0 and agent 8
 -0 
 Testing agent 1 and agent 8
@@ -127,28 +127,28 @@ Testing agent 2 and agent 8
 Testing agent 3 and agent 8
 -0 
 Testing agent 4 and agent 8
--2 
-Testing agent 5 and agent 8
 -0 
+Testing agent 5 and agent 8
+-1 
 Testing agent 6 and agent 8
 -0 
 Testing agent 7 and agent 8
--0 
+-1 
 Tournament matrix: 
-0 0 0 0 0 -0.2 0 0 0 
--0 0 0 0 0 0.2 0 0 0 
--0 -0 0 0 0 0 0 0 0 
--0 -0 -0 0 0 0 0 0 0 
--0 -0 -0 -0 0 0 0 0 -0.4 
-0.2 -0.2 -0 -0 -0 0 -0.2 0 0 
--0 -0 -0 -0 -0 0.2 0 0 0 
--0 -0 -0 -0 -0 -0 -0 0 0 
--0 -0 -0 -0 0.4 -0 -0 -0 0 
+0 0 0 0.2 0 0 0 0 0 
+-0 0 0 0.2 0 0.2 -0.2 0 0 
+-0 -0 0 0 0.2 0 0 0 0 
+-0.2 -0.2 -0 0 0 0 0 0 0 
+-0 -0 -0.2 -0 0 0 -0.2 0 0 
+-0 -0.2 -0 -0 -0 0 0 0 -0.2 
+-0 0.2 -0 -0 0.2 -0 0 0 0 
+-0 -0 -0 -0 -0 -0 -0 0 -0.2 
+-0 -0 -0 -0 -0 0.2 -0 0.2 0 
 Equilibrium: 
-0.377362 0.0331206 0.111797 0.111797 0.220988 1.97346e-05 0.0331206 0.111797 2.68894e-08 
-EXPLOITABILITY: 7.89382e-06
+1.1904e-05 8.21355e-09 8.48797e-06 0.292207 0.307101 0.239356 5.72031e-06 0.161309 2.40679e-07 
+EXPLOITABILITY: 5.68331e-06
 Testing agent 0 and agent 9
-1 
+-1 
 Testing agent 1 and agent 9
 -0 
 Testing agent 2 and agent 9
@@ -158,27 +158,27 @@ Testing agent 3 and agent 9
 Testing agent 4 and agent 9
 -0 
 Testing agent 5 and agent 9
--0 
+-1 
 Testing agent 6 and agent 9
 -0 
 Testing agent 7 and agent 9
--0 
+-1 
 Testing agent 8 and agent 9
 -0 
 Tournament matrix: 
-0 0 0 0 0 -0.2 0 0 0 0.2 
--0 0 0 0 0 0.2 0 0 0 0 
--0 -0 0 0 0 0 0 0 0 0 
--0 -0 -0 0 0 0 0 0 0 0 
--0 -0 -0 -0 0 0 0 0 -0.4 0 
-0.2 -0.2 -0 -0 -0 0 -0.2 0 0 0 
--0 -0 -0 -0 -0 0.2 0 0 0 0 
--0 -0 -0 -0 -0 -0 -0 0 0 0 
--0 -0 -0 -0 0.4 -0 -0 -0 0 0 
--0.2 -0 -0 -0 -0 -0 -0 -0 -0 0 
+0 0 0 0.2 0 0 0 0 0 -0.2 
+-0 0 0 0.2 0 0.2 -0.2 0 0 0 
+-0 -0 0 0 0.2 0 0 0 0 0 
+-0.2 -0.2 -0 0 0 0 0 0 0 0 
+-0 -0 -0.2 -0 0 0 -0.2 0 0 0 
+-0 -0.2 -0 -0 -0 0 0 0 -0.2 -0.2 
+-0 0.2 -0 -0 0.2 -0 0 0 0 0 
+-0 -0 -0 -0 -0 -0 -0 0 -0.2 -0.2 
+-0 -0 -0 -0 -0 0.2 -0 0.2 0 0 
+0.2 -0 -0 -0 -0 0.2 -0 0.2 -0 0 
 Equilibrium: 
-2.55466e-07 1.10763e-05 0.100521 0.100521 0.19893 0.138778 1.10763e-05 0.100521 3.51151e-13 0.360707 
-EXPLOITABILITY: 8.75884e-06
+1.28228e-05 2.18101e-09 1.19634e-05 0.280964 0.277884 0.260599 8.28718e-06 0.18052 2.70333e-08 1.40607e-08 
+EXPLOITABILITY: 8.10022e-06
 Testing agent 0 and agent 10
 -0 
 Testing agent 1 and agent 10
@@ -186,7 +186,7 @@ Testing agent 1 and agent 10
 Testing agent 2 and agent 10
 -0 
 Testing agent 3 and agent 10
--0 
+-1 
 Testing agent 4 and agent 10
 -0 
 Testing agent 5 and agent 10
@@ -194,23 +194,23 @@ Testing agent 5 and agent 10
 Testing agent 6 and agent 10
 -0 
 Testing agent 7 and agent 10
--1 
+-0 
 Testing agent 8 and agent 10
 -0 
 Testing agent 9 and agent 10
 -0 
 Tournament matrix: 
-0 0 0 0 0 -0.2 0 0 0 0.2 0 
--0 0 0 0 0 0.2 0 0 0 0 0 
--0 -0 0 0 0 0 0 0 0 0 0 
--0 -0 -0 0 0 0 0 0 0 0 0 
--0 -0 -0 -0 0 0 0 0 -0.4 0 0 
-0.2 -0.2 -0 -0 -0 0 -0.2 0 0 0 0 
--0 -0 -0 -0 -0 0.2 0 0 0 0 0 
--0 -0 -0 -0 -0 -0 -0 0 0 0 -0.2 
--0 -0 -0 -0 0.4 -0 -0 -0 0 0 0 
--0.2 -0 -0 -0 -0 -0 -0 -0 -0 0 0 
--0 -0 -0 -0 -0 -0 -0 0.2 -0 -0 0 
+0 0 0 0.2 0 0 0 0 0 -0.2 0 
+-0 0 0 0.2 0 0.2 -0.2 0 0 0 0 
+-0 -0 0 0 0.2 0 0 0 0 0 0 
+-0.2 -0.2 -0 0 0 0 0 0 0 0 -0.2 
+-0 -0 -0.2 -0 0 0 -0.2 0 0 0 0 
+-0 -0.2 -0 -0 -0 0 0 0 -0.2 -0.2 0 
+-0 0.2 -0 -0 0.2 -0 0 0 0 0 0 
+-0 -0 -0 -0 -0 -0 -0 0 -0.2 -0.2 0 
+-0 -0 -0 -0 -0 0.2 -0 0.2 0 0 0 
+0.2 -0 -0 -0 -0 0.2 -0 0.2 -0 0 0 
+-0 -0 -0 0.2 -0 -0 -0 -0 -0 -0 0 
 Equilibrium: 
-2.69515e-07 1.11352e-05 0.0913807 0.0913807 0.181014 0.126168 1.11352e-05 0.181881 4.17051e-13 0.328153 2.58927e-07 
-EXPLOITABILITY: 8.80034e-06
+3.38772e-07 6.32326e-11 9.49198e-06 0.350039 0.25376 0.231306 6.76603e-06 0.164878 2.46182e-08 1.43517e-08 2.60991e-07 
+EXPLOITABILITY: 6.5032e-06

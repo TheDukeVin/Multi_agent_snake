@@ -1,6 +1,13 @@
 
-training_data <- read.delim("/Users/kevindu/Desktop/Employment/Multiagent Snake Research/kevindu@login.rc.fas.harvard.edu/multiagent_snake/training200.out", sep=',', header = FALSE)
-N = length(training_data[1,])
+value_data <- read.delim("/Users/kevindu/Desktop/Employment/Multiagent Snake Research/kevindu@login.rc.fas.harvard.edu/multiagent_snake/valueLoss.out", sep=',', header = FALSE)
+policy_data <- read.delim("/Users/kevindu/Desktop/Employment/Multiagent Snake Research/kevindu@login.rc.fas.harvard.edu/multiagent_snake/policyLoss.out", sep=',', header = FALSE)
+norm_data <- read.delim("/Users/kevindu/Desktop/Employment/Multiagent Snake Research/kevindu@login.rc.fas.harvard.edu/multiagent_snake/norm.out", sep=',', header = FALSE)
+N = length(value_data)
+
+value_data <- value_data[-N]
+policy_data <- policy_data[-N]
+norm_data <- norm_data[-N]
+N = N-1
 
 # EvalPeriod = 1000
 # 
@@ -33,9 +40,9 @@ consec_avg <- function(lst, N){
 #   lines((1:(EvalPeriod/NUM_AVG)) * NUM_AVG, consec_avg(range, NUM_AVG), col="red")
 # }
 
-plot(1:N, training_data[1,], main="value loss")
-lines(1:(N/NUM_AVG) * NUM_AVG, consec_avg(training_data[1,], NUM_AVG), col="red")
-plot(1:N, training_data[2,], main="policy loss")
-lines(1:(N/NUM_AVG) * NUM_AVG, consec_avg(training_data[2,], NUM_AVG), col="red")
-plot(1:N, training_data[3,], main="grad norm")
-lines(1:(N/NUM_AVG) * NUM_AVG, consec_avg(training_data[3,], NUM_AVG), col="red")
+plot(1:N, value_data, main="value loss")
+# lines(1:(N/NUM_AVG) * NUM_AVG, consec_avg(value_data, NUM_AVG), col="red")
+plot(1:N, policy_data, main="policy loss")
+# lines(1:(N/NUM_AVG) * NUM_AVG, consec_avg(policy_data, NUM_AVG), col="red")
+plot(1:N, norm_data, main="grad norm")
+# lines(1:(N/NUM_AVG) * NUM_AVG, consec_avg(norm_data, NUM_AVG), col="red")

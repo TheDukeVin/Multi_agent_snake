@@ -310,7 +310,7 @@ document.getElementById('myText')
     })
 
 function makeAgentAction(action){
-    env.agentActions[0] = action % NUM_AGENT_ACTIONS
+    env.agentActions[0] = action % NUM_AGENT_ACTIONS 
     env.agentActions[1] = Math.floor(action / NUM_AGENT_ACTIONS)
     env.agentAction()
 }
@@ -477,6 +477,7 @@ function draw(){
                 else{
                     nextDir = Math.floor(currAction / NUM_AGENT_ACTIONS)
                 }
+                console.log(currAction)
                 if(nextDir >= NUM_AGENT_ACTIONS){
                     console.log(currAction)
                 }

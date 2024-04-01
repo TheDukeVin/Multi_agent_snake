@@ -22,6 +22,8 @@
 #include <unordered_map>
 #include <stdio.h>
 #include <sstream>
+#include <mutex>
+#include <condition_variable>
 #include "LSTM/lstm.h"
 
 #ifndef snake_h
@@ -61,20 +63,16 @@ using namespace std;
 #define maxStates (maxTime * 2 * numPaths)
 #define maxAgentQueue 5
 #define evalPeriod 1000
-#define trainPeriod 200
-#define numRolloutsPerThread 10
 #define numEvalGames 100
 // #define maxAgentQueue 11
-// #define evalPeriod 1
-// #define trainPeriod 10
-// #define numRolloutsPerThread 1
+// #define evalPeriod 5
 // #define numEvalGames 1
 
 #define scoreNorm LosePenalty
 
 #define numGames ((maxAgentQueue - 1) * evalPeriod)
 // #define numPaths 200
-#define numPaths 50
+#define numPaths 100
 
 // Passing Value or Full (or Policy)
 
@@ -85,8 +83,8 @@ using namespace std;
 // Multithreading
 
 // #define NUM_THREADS 40
-#define NUM_THREADS 20
-// #define NUM_THREADS 1
+#define NUM_THREADS 10
+// #define NUM_THREADS 2
 
 // Miscellaneous
 
@@ -540,6 +538,10 @@ public:
     int index;
     int currSize, numFilled;
     double learnRate, momentum;
+
+    const string valueLossFile = "valueLoss.out";
+    const string policyLossFile = "policyLoss.out";
+    const string normFile = "norm.out";
     
     DataQueue(){}
     DataQueue(LSTM::PVUnit* structure);
@@ -552,6 +554,9 @@ public:
     void backPropRollout(LSTM::PVUnit& a, int rolloutIndex);
     void trainAgent(LSTM::PVUnit& a, string outFile);
     vector<int> readGames(string fileName);
+
+    void empty();
+    void trainAll(LSTM::PVUnit& a);
 
     ~DataQueue(){
         for(int i=0; i<maxTime*2; i++){

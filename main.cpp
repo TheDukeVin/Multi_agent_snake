@@ -111,13 +111,40 @@ void printArray(double* A, int size){
 //     }
 // }
 
-OutputGameDetails gameStore[NUM_THREADS][numRolloutsPerThread];
+mutex mtx[NUM_THREADS];
+condition_variable cv[NUM_THREADS];
+
+int inputState[NUM_THREADS];
+int outputState[NUM_THREADS];
+
+const int INPUT_READY = 0;
+const int INPUT_WAITING = 1;
+const int INPUT_EXIT = 2;
+const int OUTPUT_READY = 0;
+const int OUTPUT_WAITING = 1;
+
+OutputGameDetails gameStore[NUM_THREADS];
 
 void runThread(int trainerIndex){
-    for(int i=0; i<numRolloutsPerThread; i++){
+    while(true){
+        unique_lock<mutex> lk(mtx[trainerIndex]);
+        cv[trainerIndex].wait(lk, [&trainerIndex]{return inputState[trainerIndex] != INPUT_WAITING; });
+
+        if(inputState[trainerIndex] == INPUT_EXIT) break;
+        inputState[trainerIndex] = INPUT_WAITING;
+
         trainers[trainerIndex]->trainGame(TRAIN_MODE);
-        gameStore[trainerIndex][i] = OutputGameDetails(trainers[trainerIndex]->output_game, trainers[trainerIndex]->total_reward);
+        gameStore[trainerIndex] = OutputGameDetails(trainers[trainerIndex]->output_game, trainers[trainerIndex]->total_reward);
+
+        outputState[trainerIndex] = OUTPUT_READY;
+
+        lk.unlock();
+        cv[trainerIndex].notify_one();
     }
+    // for(int i=0; i<numRolloutsPerThread; i++){
+    //     trainers[trainerIndex]->trainGame(TRAIN_MODE);
+    //     gameStore[trainerIndex][i] = OutputGameDetails(trainers[trainerIndex]->output_game, trainers[trainerIndex]->total_reward);
+    // }
 }
 
 void evaluateAgent(int tournament_size, LSTM::PVUnit* a, string controlLog){
@@ -242,20 +269,14 @@ void trainCycle(){
 
     cout << "Initializing training process\n";
 
-    //cout<<"Reading net:\n";
-    //t.a.readNet("snakeConv.in");
-
     const int storePeriod = 1000;
     
     dq->index = 0;
     dq->currSize = 2000;
-    dq->momentum = 0.7;
+    dq->momentum = -1;
     dq->learnRate = 0.001;
     double explorationConstant = 0.5;
     
-    //cout<<"Reading games\n";
-    //vector<int> scores = dq->readGames(); // read games from games.in file.
-    //cout<<"Finished reading " << dq->index << " games\n";
     vector<int> scores;
     
     double sum = 0;
@@ -284,10 +305,17 @@ void trainCycle(){
     }
 
     cout << "Running games\n";
+
+    for(int i=0; i<NUM_THREADS; i++){
+        inputState[i] = INPUT_WAITING;
+        outputState[i] = OUTPUT_WAITING;
+        threads[i] = new thread(runThread, i);
+    }
     
     for(int i=1; i<=numGames; ){
         // Generate training rollouts
         for(int j=0; j<NUM_THREADS; j++){
+            mtx[j].lock();
             trainers[j]->cUCB = explorationConstant;
 
             trainers[j]->a->copyParams(&a);
@@ -295,17 +323,20 @@ void trainCycle(){
             trainers[j]->competitor->copyParams(opponents[advIndex]);
             trainers[j]->passParams();
 
-            threads[j] = new thread(runThread, j);
-        }
-        for(int j=0; j<NUM_THREADS; j++){
-            threads[j]->join();
+            inputState[j] = INPUT_READY;
+            mtx[j].unlock();
+            cv[j].notify_one();
         }
 
-        for(int j=0; j<NUM_THREADS*numRolloutsPerThread; j++){
-            int trainerIndex = j / numRolloutsPerThread;
-            int gameIndex = j % numRolloutsPerThread;
-            vector<Data> game = gameStore[trainerIndex][gameIndex].game;
-            double total_reward = gameStore[trainerIndex][gameIndex].total_reward;
+        dq->empty();
+        for(int j=0; j<NUM_THREADS; j++){
+            unique_lock<mutex> lk(mtx[j]);
+            cv[j].wait(lk, [&j]{return outputState[j] != OUTPUT_WAITING;});
+            outputState[j] = OUTPUT_WAITING;
+
+            int trainerIndex = j;
+            vector<Data> game = gameStore[trainerIndex].game;
+            double total_reward = gameStore[trainerIndex].total_reward;
 
             dq->enqueue(game);
             // Log games.
@@ -316,15 +347,9 @@ void trainCycle(){
                 game[t].e.log(gameLog);
             }
 
-            // ofstream valueOut(valueLog, ios::app);
-            // valueOut<<"Game "<<i<<' '<<time(NULL)<<'\n';
-            // valueOut<<trainers[j]->valueOutput;
-            // valueOut.close();
-
             // get cumulative rewards
             double score = total_reward;
             Environment* result = &(game[game.size()-1].e);
-            // double score = result->snakes[0].size - result->snakes[1].size;
             sum += score;
             
             ofstream summaryOut(summaryLog, ios::app);
@@ -351,11 +376,7 @@ void trainCycle(){
                 computeOracle(tournament_size, controlLog);
             }
             
-            if(i>0 && i%trainPeriod == 0){
-                cout << "Training\n";
-                dq->trainAgent(a, "training" + to_string(i) + ".out");
-                cout << "Done training\n";
-            }
+            
             i++;
 
             // Schedule
@@ -366,6 +387,17 @@ void trainCycle(){
                 controlOut.close();
             }
         }
+        cout << "Training\n";
+        dq->trainAll(a);
+        cout << "Done training\n";
+    }
+
+    for(int i=0; i<NUM_THREADS; i++){
+        mtx[i].lock();
+        inputState[i] = INPUT_EXIT;
+        mtx[i].unlock();
+        cv[i].notify_one();
+        threads[i]->join();
     }
 }
 
@@ -380,145 +412,6 @@ void trainCycle(){
 
 
 
-
-// Tabular methods
-
-//vector<Environment> nextStates(Environment e){
-    // vector<Environment> states;
-    // if(e.actionType == 0){
-    //     for(int i=0; i<numAgentActions; i++){
-    //         if(!e.validAgentAction(0, i)) continue;
-    //         for(int j=0; j<numAgentActions; j++){
-    //             if(!e.validAgentAction(1, j)) continue;
-    //             Environment newEnv = e;
-    //             newEnv.agentActions[0] = i;
-    //             newEnv.agentActions[1] = j;
-    //             newEnv.agentAction();
-    //             states.push_back(newEnv);
-    //         }
-    //     }
-    // }
-    // else{
-    //     for(int i=0; i<numChanceActions; i++){
-    //         if(!e.validChanceAction(i)) continue;
-    //         Environment newEnv = e;
-    //         newEnv.chanceAction(i);
-    //         states.push_back(newEnv);
-    //     }
-    // }
-    
-    // return states;
-//}
-
-// void computeEnv(){
-//     Environment env;
-//     env.initialize();
-//     list<Environment> queue;
-//     queue.push_back(env);
-//     unordered_map<Environment, bool, EnvHash> states;
-//     vector<Environment> allStates;
-
-//     while(queue.size() != 0){
-//         Environment currEnv = queue.front();
-//         //currEnv.log();
-//         queue.pop_front();
-//         if(currEnv.isEndState()){
-//             continue;
-//         }
-//         for(auto nextEnv : nextStates(currEnv)){
-//             if(states.find(nextEnv) == states.end()){
-//                 states[nextEnv] = true;
-//                 queue.push_back(nextEnv);
-//                 allStates.push_back(nextEnv);
-//             }
-//         }
-//     }
-//     cout<<"Number of states: "<<states.size()<<'\n';
-// /*
-//     for(int i=0; i<10; i++){
-//         allStates[rand() % allStates.size()].log();
-//     }*/
-// }
-
-
-
-
-
-
-
-
-
-
-
-// K-means Clustering:
-
-// int numActivations = 100;
-
-// void get_embedding(){
-//     dq.currSize = 10000;
-//     dq.readGames("details.out");
-//     vector<Environment> states;
-//     for(int i=0; i<dq.currSize; i++){
-//         for(int j=0; j<dq.gameLengths[i]; j++){
-//             states.push_back(dq.queue[i][j].e);
-//         }
-//     }
-//     cout<<states.size()<<'\n';
-//     Agent net;
-//     standardSetup(net);
-//     net.readNet("nets/Game10000.out");
-//     ofstream fout ("embed.out");
-//     Branch policy_branch = net.policyBranch;
-//     Layer* lastLayer = policy_branch.layers[policy_branch.numLayers-1];
-//     for(auto s : states){
-//         s.inputSymmetric(net, 0, 0);
-//         net.pass(PASS_FULL);
-//         for(int i=0; i<numActivations; i++){
-//             fout<<lastLayer->inputs[i]<<' ';
-//         }
-//         fout<<'\n';
-//     }
-// }
-
-// void cluster(){
-//     dq.currSize = 10000;
-//     dq.readGames("details.out");
-//     vector<Environment> states;
-//     for(int i=0; i<dq.currSize; i++){
-//         for(int j=0; j<dq.gameLengths[i]; j++){
-//             states.push_back(dq.queue[i][j].e);
-//         }
-//     }
-//     int N = states.size();
-//     cout<<N<<'\n';
-//     ifstream fin ("embed.in");
-//     double data[N*numActivations];
-//     for(int i=0; i<N; i++){
-//         for(int j=0; j<numActivations; j++){
-//             fin >> data[i*numActivations + j];
-//         }
-//     }
-//     cout<<"Read data\n";
-//     Kmeans km(data, numActivations, N);
-//     km.cluster(100, 100, 0.001);
-// }
-
-// void testKmeans(){
-//     double data[8] = {
-//         1, 1,
-//         2, 2,
-//         1, 6,
-//         3, 6
-//     };
-//     Kmeans km(data, 2, 4);
-//     km.cluster(2, 10, 0.001);
-//     for(int i=0; i<2; i++){
-//         for(int j=0; j<2; j++){
-//             cout<<km.centers[i][j]<<' ';
-//         }
-//         cout<<'\n';
-//     }
-// }
 
 int main()
 {

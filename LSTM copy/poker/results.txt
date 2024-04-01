@@ -1,0 +1,93 @@
+
+TEST 1:
+
+Config:
+double initParam = 0.1;
+double learnRate = 0.01;
+double momentum = 0.7;
+int batchSize = 20;
+double regRate = 0.00001;
+double meanUpdate = 0.001;
+
+PG(){
+    Model m(inputSize);
+    m.addLSTM(100);
+    m.addOutput(NUM_ACTIONS);
+    seq = ModelSeq(m, TIME_HORIZON, initParam);
+}
+
+RESULT:
+Trained for 350,000 iterations. stagnated at .28
+
+TEST 2:
+
+Config:
+double initParam = 0.1;
+double learnRate = 0.05;
+double momentum = 0.7;
+int batchSize = 20;
+double regRate = 0.00001;
+double meanUpdate = 0.001;
+
+PG(){
+    Model m(inputSize);
+    m.addLSTM(100);
+    m.addOutput(NUM_ACTIONS);
+    seq = ModelSeq(m, TIME_HORIZON, initParam);
+}
+
+RESULT:
+Trained for 1,000,000 iterations. oscillated between .23-.28
+
+TEST 3:
+
+Config:
+double initParam = 0.1;
+double learnRate = 0.01;
+double momentum = 0.7;
+int batchSize = 40;
+int numSubThreads = 20;
+double regRate = 0.00001;
+double meanUpdate = 0.001;
+
+PG(){
+    Model m(inputSize);
+    m.addLSTM(100);
+    m.addOutput(NUM_ACTIONS);
+    seq = ModelSeq(m, TIME_HORIZON, initParam);
+}
+
+RESULT:
+Trained for 1,000,000 iterations. Stagnated at .29
+
+TEST 4:
+
+Config:
+Same, changed training method to only check seen cards
+
+RESULT:
+Trained for 1,000,000 iterations. Stagnated at .29, convergence at 100,000 iterations.
+
+TEST 5:
+
+Config:
+double initParam = 0.1;
+double learnRate = 0.01;
+double momentum = 0.7;
+int batchSize = 40;
+int numSubThreads = 20;
+double regRate = 0.00001;
+double meanUpdate = 0.001;
+
+PG(){
+    Model m(inputSize);
+    m.addLSTM(200);
+    m.addOutput(NUM_ACTIONS);
+    seq = ModelSeq(m, TIME_HORIZON, initParam);
+}
+
+RESULT:
+Trained for 1,000,000 iterations.
+0: 0.263573
+0: TIME: 92838
+
