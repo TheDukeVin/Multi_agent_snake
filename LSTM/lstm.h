@@ -195,11 +195,8 @@ public:
 };
 
 class Layer{
-protected:
-    Data* addData(int size);
-    void resetGradient();
-    
 public:
+
     Params* params;
     vector<Data*> allHiddenData;
     vector<Node*> allNodes;
@@ -211,6 +208,9 @@ public:
     Data* output;
 
     Layer(){}
+    
+    Data* addData(int size);
+    void resetGradient();
 
     void forwardPass(); // resets gradient of all data
     void backwardPass();

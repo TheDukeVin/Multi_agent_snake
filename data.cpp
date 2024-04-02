@@ -30,8 +30,10 @@ DataQueue::DataQueue(LSTM::PVUnit* structure){
     fout1.close();
     ofstream fout2(policyLossFile);
     fout2.close();
-    ofstream fout3(normFile);
+    ofstream fout3(valueNormFile);
     fout3.close();
+    ofstream fout4(policyNormFile);
+    fout4.close();
 }
 
 void DataQueue::enqueue(vector<Data> d){
@@ -46,7 +48,6 @@ void DataQueue::enqueue(vector<Data> d){
 
 void DataQueue::backPropRollout(LSTM::PVUnit& agent, int rolloutIndex){
     double policy[2*maxTime][numAgentActions];
-    valueLoss = policyLoss = 0;
     for(int i=0; i<queue[rolloutIndex].size(); i++){
         units[i]->copyParams(&agent);
         int symID = 0;
@@ -59,9 +60,13 @@ void DataQueue::backPropRollout(LSTM::PVUnit& agent, int rolloutIndex){
     }
     // ofstream dataOut("data.out", ios::app);
     for(int i=queue[rolloutIndex].size()-1; i>=0; i--){
+        // Calculate policy gradients
+        units[i]->resetGradient();
         for(int j=0; j<agent.policyBranch->outputSize; j++){
             units[i]->policyOutput->gradient[j] = 0;
         }
+        units[i]->valueOutput->gradient[0] = 0;
+
         Environment env = queue[rolloutIndex][i].e;
         // dataOut << env.toString() << '\n';
         if(!env.isEndState() && env.actionType == 0){
@@ -71,53 +76,38 @@ void DataQueue::backPropRollout(LSTM::PVUnit& agent, int rolloutIndex){
                 policyLoss -= queue[rolloutIndex][i].expectedPolicy[a] * log(policy[i][a]);
             }
         }
-        units[i]->valueOutput->gradient[0] = units[i]->valueOutput->data[0] - queue[rolloutIndex][i].expectedValue;
         units[i]->backwardPass();
+        agent.accumulateGradient(units[i]);
+
+        // Update norm of policy gradients
+        for(int j=0; j<units[i]->allBranches.size(); j++){
+            for(int k=0; k<units[i]->allBranches[j]->layers.size(); k++){
+                for(int l=0; l<units[i]->allBranches[j]->layers[k]->params->size; l++){
+                    policyGradNorm += pow(units[i]->allBranches[j]->layers[k]->params->gradient[l], 2);
+                }
+            }
+        }
+
+        // Calculate value gradients
+        units[i]->resetGradient();
+        for(int j=0; j<agent.policyBranch->outputSize; j++){
+            units[i]->policyOutput->gradient[j] = 0;
+        }
+        units[i]->valueOutput->gradient[0] = units[i]->valueOutput->data[0] - queue[rolloutIndex][i].expectedValue;
         // dataOut << "Value: " << units[i]->valueOutput->data[0] << ' ' << queue[rolloutIndex][i].expectedValue << '\n';
+        units[i]->backwardPass();
         agent.accumulateGradient(units[i]);
         valueLoss += pow(units[i]->valueOutput->gradient[0], 2);
+
+        // Track norm of gradients
+        for(int j=0; j<units[i]->allBranches.size(); j++){
+            for(int k=0; k<units[i]->allBranches[j]->layers.size(); k++){
+                for(int l=0; l<units[i]->allBranches[j]->layers[k]->params->size; l++){
+                    valueGradNorm += pow(units[i]->allBranches[j]->layers[k]->params->gradient[l], 2);
+                }
+            }
+        }
     }
-}
-
-void DataQueue::trainAgent(LSTM::PVUnit& a, string outFile){
-    // int i,j;
-    // string valueLossOut;
-    // string policyLossOut;
-    // string normOut;
-    // for(i=0; i<numBatches; i++){
-    //     backPropRollout(a, rand() % numFilled);
-    //     a.updateParams(learnRate / maxTime, momentum, 0.0001);
-
-    //     // Track norm of gradients
-    //     // double gradNorm = 0;
-    //     // for(int j=0; j<a.allBranches.size(); j++){
-    //     //     for(int k=0; k<a.allBranches[j]->layers.size(); k++){
-    //     //         for(int l=0; l<a.allBranches[j]->layers[k]->params->size; l++){
-    //     //             gradNorm += pow(a.allBranches[j]->layers[k]->params->gradient[l], 2);
-    //     //         }
-    //     //     }
-    //     // }
-
-    //     // if(i > 0){
-    //     //     valueLossOut += ",";
-    //     //     policyLossOut += ",";
-    //     //     normOut += ",";
-    //     // }
-    //     // valueLossOut += to_string(valueLoss);
-    //     // policyLossOut += to_string(policyLoss);
-    //     // normOut += to_string(gradNorm);
-
-    //     // for(j=0; j<batchSize; j++){
-    //     //     int gameIndex = rand() % numFilled;
-    //     //     queue[gameIndex][rand() % gameLengths[gameIndex]].trainAgent(a);
-    //     // }
-    //     // a.updateParameters(learnRate / batchSize, momentum);
-    // }
-    // ofstream fout(outFile);
-    // fout << valueLossOut << '\n';
-    // fout << policyLossOut << '\n';
-    // fout << normOut << '\n';
-    // fout.close();
 }
 
 vector<int> DataQueue::readGames(string fileName){
@@ -180,36 +170,27 @@ void DataQueue::trainAll(LSTM::PVUnit& a){
     int i,j;
     ofstream valueLossOut(valueLossFile, ios::app);
     ofstream policyLossOut(policyLossFile, ios::app);
-    ofstream normOut(normFile, ios::app);
+    ofstream valueNormOut(valueNormFile, ios::app);
+    ofstream policyNormOut(policyNormFile, ios::app);
 
     double valSum = 0;
     double polSum = 0;
-    double normSum = 0;
     for(i=0; i<numFilled; i++){
+        valueLoss = policyLoss = 0;
+        valueGradNorm = policyGradNorm = 0;
+
         backPropRollout(a, i);
 
-        // Track norm of gradients
-        double gradNorm = 0;
-        for(int j=0; j<a.allBranches.size(); j++){
-            for(int k=0; k<a.allBranches[j]->layers.size(); k++){
-                for(int l=0; l<a.allBranches[j]->layers[k]->params->size; l++){
-                    gradNorm += pow(a.allBranches[j]->layers[k]->params->gradient[l], 2);
-                }
-            }
-        }
-
-        valSum += valueLoss;
-        polSum += policyLoss;
-        normSum += gradNorm;
-
-        // for(j=0; j<batchSize; j++){
-        //     int gameIndex = rand() % numFilled;
-        //     queue[gameIndex][rand() % gameLengths[gameIndex]].trainAgent(a);
-        // }
-        // a.updateParameters(learnRate / batchSize, momentum);
+        // valSum += valueLoss;
+        // polSum += policyLoss;
+        valueLossOut << valueLoss << ',';
+        policyLossOut << policyLoss << ',';
+        valueNormOut << valueGradNorm << ',';
+        policyNormOut << policyGradNorm << ',';
     }
-    valueLossOut << valSum << ',';
-    policyLossOut << polSum << ',';
-    normOut << normSum << ',';
+    valueLossOut << '\n';
+    policyLossOut << '\n';
+    valueNormOut << '\n';
+    policyNormOut << '\n';
     a.updateParams(learnRate, momentum, 0.0001);
 }

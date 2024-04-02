@@ -204,3 +204,10 @@ When running 10 threads, Thread 1 takes ~110s. Each additional thread takes ~20s
 Syncing particular files
 
 rsync kevindu@login.rc.fas.harvard.edu:./MultiagentSnake/multiagent_snake/training200.out .
+
+4/1/24
+
+To delete all files of a certain extension:
+
+find . -name "*.out" -type f
+find . -name "*.out" -type f -delete

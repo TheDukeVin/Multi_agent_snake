@@ -541,7 +541,8 @@ public:
 
     const string valueLossFile = "valueLoss.out";
     const string policyLossFile = "policyLoss.out";
-    const string normFile = "norm.out";
+    const string valueNormFile = "valueNorm.out";
+    const string policyNormFile = "policyNorm.out";
     
     DataQueue(){}
     DataQueue(LSTM::PVUnit* structure);
@@ -551,8 +552,10 @@ public:
 
     double valueLoss;
     double policyLoss;
+    double valueGradNorm;
+    double policyGradNorm;
     void backPropRollout(LSTM::PVUnit& a, int rolloutIndex);
-    void trainAgent(LSTM::PVUnit& a, string outFile);
+    // void trainAgent(LSTM::PVUnit& a, string outFile);
     vector<int> readGames(string fileName);
 
     void empty();
